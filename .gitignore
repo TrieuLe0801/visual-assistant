@@ -8,6 +8,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+node_modules/
 
 # Secrets and local configuration
 .env
@@ -27,4 +28,11 @@ htmlcov/
 # Build artifacts
 build/
 dist/
+*.tsbuildinfo
+var/
+*.sqlite3
+
+# Generated Graphify and Archify artifacts
+/graphify-out/
+/docs/architecture/
 

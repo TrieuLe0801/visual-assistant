@@ -1,10 +1,14 @@
 # ADR 0004 — New sightseeing webapp scope and two runtime agents
 
 Date: 2026-10-14
-Status: Accepted
+Status: Superseded by ADR 0005 on 2026-11-08
 Supersedes: ADR 0002 and ADR 0003 for product/runtime scope.
 
 ## Context
+
+This record documents the travel-planner scope accepted on 2026-10-14. On
+2026-11-08, the user replaced that product with an AI image generation webapp;
+see [ADR 0005](0005-ai-image-studio.md). The decisions below remain historical.
 
 The user explicitly discarded the old POC plan and defined a new simple webapp.
 The confirmed input is a destination/place, concrete start date and day count.
@@ -58,4 +62,4 @@ checks; travel time is estimated and missing opening-hour evidence stays explici
 
 Review if the user changes the two-agent/model requirement, adds durable state
 or a new provider, or introduces a product capability outside the current
-[charter](../project-charter.md).
+[historical sightseeing charter](../archive/2026-10-14/sightseeing-charter.md).

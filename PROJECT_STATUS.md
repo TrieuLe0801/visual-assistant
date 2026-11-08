@@ -4,77 +4,74 @@ Last updated: 2026-11-08
 
 ## Current milestone
 
-Yêu cầu và kế hoạch mới đã được ghi vào repository. Bước tiếp theo là triển
-khai luồng tạo lịch trình có tìm kiếm thật với hai agent.
+MVP implemented and offline verified. Live OpenAI and self-hosted provider
+checks remain pending because no real credentials or endpoint were supplied for
+this verification.
 
 Active plan: [docs/implementation-plan.md](docs/implementation-plan.md).
 Active charter: [docs/project-charter.md](docs/project-charter.md).
-Current log: [2026-11-08-codex-workflow.md](docs/learning-log/2026-11-08-codex-workflow.md).
+Current log: [docs/learning-log/2026-11-08-image-studio.md](docs/learning-log/2026-11-08-image-studio.md).
 
-Scope, deadline và số liệu tiến độ của POC cũ đã được thay thế. Chưa chốt
-deadline mới; tiến độ triển khai mới không kế thừa các mục đã đánh dấu của
-roadmap cũ.
+The image-studio scope replaces the travel-planner product. The previous
+charter and implementation plan are preserved under
+[`docs/archive/2026-10-14/`](docs/archive/2026-10-14/README.md). No travel
+planner completion counts carry forward.
 
 ## Done
 
-- Chuẩn bị Codex development workflow để dùng trên máy hoặc repository khác:
-  4 role file không còn phụ thuộc sản phẩm, 2 repository skills, hướng dẫn
-  chuyển giao và bản sửa ADR 0001. Kiểm chứng ghi trong
-  [learning log hiện tại](docs/learning-log/2026-11-08-codex-workflow.md).
-
-- Ghi nhận đầu vào: địa điểm/thành phố, ngày bắt đầu, số ngày.
-- Chốt AI tìm kiếm trước khi gợi ý; chat sửa ngày giờ, đổi thứ tự, thêm/bỏ/thay điểm.
-- Chốt LangChain, LangGraph, Tavily, LangSmith và `gpt-5.5` cho hai runtime agents.
-- Chốt state app chỉ trong phiên; trace LangSmith dùng cho quan sát.
-- Đồng bộ charter, kế hoạch, UI proposal, ADR 0004, README và hướng dẫn Codex.
-- Thay roadmap/progress hiện hành; giữ snapshot kế hoạch trước trong archive.
-- Thêm `.env.example`; giữ nguyên `.env` và development tooling sẵn có.
+- Recorded image-studio requirements, provider/storage decisions, MVP limits
+  and acceptance scenarios in the charter and [ADR 0005](docs/adr/0005-ai-image-studio.md).
+- Implemented FastAPI email/password auth, signed sessions, SQLite records,
+  owner-scoped image access and local-volume storage.
+- Added provider interface and OpenAI/OpenAI-compatible adapters for image
+  generation, editing and variations.
+- Added prompt/status/metadata persistence, source relationships, image
+  validation, 20 MiB output limit and safe provider/storage failures.
+- Built React/TypeScript screens for auth, library, prompt creation, image
+  details, edit, variation and download.
+- Added offline tests with fake provider and HTTP transport. Full suite passes.
+- Added frontend lockfile and recorded the active environment baseline.
 
 ## Implementation status
 
-| Bước | Trạng thái | Bằng chứng hiện có |
+| Bước | Trạng thái | Bằng chứng |
 |---|---|---|
-| 1. Hai agent, graph, Tavily và tạo lịch trình | Chưa triển khai | Kế hoạch và acceptance scenarios |
-| 2. Chỉnh sửa lịch trình qua chat | Chưa triển khai | Phạm vi thao tác đã chốt |
-| 3. Webapp, cách ly phiên và kiểm chứng trace | Chưa triển khai | Đề xuất UI và tiêu chí kiểm chứng |
-
-Development-hook tests không phải test của travel planner. Chưa có code
-application, dữ liệu tìm kiếm thật hoặc live trace trong repository này.
+| 1. Tài khoản, quyền sở hữu và lưu trữ bền vững | Hoàn thành | Auth, owner-isolation, file access và restart tests |
+| 2. Generation, edit, variation và provider errors | Hoàn thành offline | Fake-provider, adapter, unsupported capability, invalid/oversized image và storage-failure tests |
+| 3. Giao diện và production build | Hoàn thành offline | SPA/static tests; TypeScript + Vite build passed |
+| 4. Live OpenAI/self-hosted smoke tests | Chưa chạy | Cần endpoint và credentials; không có model call trong lần kiểm chứng này |
 
 ## Now
 
-1. Tạo application package và typed request/plan/source/state contracts.
-2. Thêm runtime dependencies cho LangChain, LangGraph, model, Tavily và giao diện.
-3. Tạo Coordinator và Planner với prompt/trách nhiệm riêng, dùng chung `gpt-5.5`.
-4. Nối graph, Tavily, validation và tracing cho luồng tạo lịch trình đầu tiên.
+1. Configure `SESSION_SECRET` before any non-development deployment.
+2. When credentials and endpoint are available, run separate OpenAI and
+   self-hosted generation/edit/variation smoke checks.
+3. Define a backup procedure for SQLite and the local image volume before
+   storing production data.
 
 ## Next
 
-- Thêm các thao tác chỉnh sửa bằng chat trên cùng state và luồng xử lý.
-- Gắn giao diện một trang; giữ hội thoại và lịch trình theo từng phiên.
-- Chạy kiểm thử offline bằng provider giả lập và smoke test với API thật riêng.
-- Kiểm tra root/child traces nhóm đúng phiên trên LangSmith.
+- Record live provider results and any provider-specific capability gaps.
+- Consider asynchronous jobs or object storage only if real deployment needs
+  require them.
 
 ## Dependencies and limits
 
-Quyền truy cập `gpt-5.5`, Tavily và LangSmith chưa được kiểm chứng trong công
-việc cập nhật tài liệu này. Giao diện Streamlit và các giới hạn vòng gọi tool
-trong kế hoạch là đề xuất triển khai. Thời gian di chuyển là ước tính khi chưa
-có dữ liệu tuyến đường; giờ mở cửa phụ thuộc nguồn tìm được.
+The default provider/model are admin configuration; the UI does not expose
+them. Live provider behavior remains unverified. SQLite and local files target a
+single application host; backup and multi-host coordination are not included.
+Provider calls run synchronously, so a request can remain open while an image
+is generated.
 
-## Verification of this update
+## Verification
 
-- Tài liệu: 61 liên kết nội bộ được kiểm tra; không có link thiếu đích.
-- Progress JSON hợp lệ: 3 bước, 12 task triển khai đều chưa hoàn thành.
-- Roadmap hiện hành không còn seed/localStorage hay task IDs của checklist cũ.
-- Cấu hình mẫu dùng `gpt-5.5`, credential placeholders trống; `.env` được ignore
-  và `.env.example` được phép theo dõi bằng Git.
-- `uv lock --check`: passed.
-- `uv run pytest`: 2 passed (development-hook tests).
-- isort, Black, flake8 và Ruff theo lệnh chuẩn: passed.
+- Project Python: CPython 3.10.21 via uv; system `python3` is 3.9.6.
+- `uv sync --locked`: passed; 37 packages checked.
+- `uv lock --check`: passed; 41 packages resolved.
+- `uv run pytest tests/test_image_studio.py`: 15 passed.
+- `uv run pytest`: 17 passed (15 application tests and 2 development-hook tests).
+- isort, Black, flake8 and Ruff standard checks: passed.
+- `npm ci --offline`: passed; no vulnerabilities reported.
+- `npm run build`: passed with Vite 8.3.6.
 - `git diff --check`: passed.
-- Kiểm tra độc lập: passed; 65 links gồm tài liệu lịch sử hợp lệ, 5 archive
-  snapshots khớp phiên bản trước và các quyết định đã chốt được giữ đầy đủ.
-
-Application tests và live model/Tavily/LangSmith checks: N/A / chưa chạy vì
-công việc này cập nhật kế hoạch, không triển khai ứng dụng.
+- Live provider calls and browser-driven E2E: not run.

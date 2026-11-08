@@ -9,10 +9,10 @@ The Week 0 baseline selected `uv`, `pytest` and Ruff, but the Python project did
 not yet exist. The development workflow now needs Codex coding/testing helpers
 and automatic PEP 8 formatting with isort, Black and flake8.
 
-These are development assistants. They are separate from the travel planner's
-runtime agent topology. Update 2026-10-14: the current Coordinator/Planner
-runtime is defined by [ADR 0004](0004-city-sightseeing-webapp.md); the tooling
-decision in this record remains accepted.
+These are development assistants. They are separate from the application's
+runtime. The current product/runtime decision is defined by
+[ADR 0005](0005-ai-image-studio.md); the tooling decision in this record
+remains accepted.
 
 ## Decision
 
@@ -71,7 +71,7 @@ inherit from the signed-in Codex session. The former fixed `gpt-5.5` setting
 failed for the `testing` development agent on a ChatGPT Codex account. This
 supersedes the model assignments in the original decision for Codex development
 agents only; it does not change the application's runtime model. Make role
-instructions independent of travel-planner product details. `AGENTS.md` and
+instructions independent of product details. `AGENTS.md` and
 the current project records continue to supply those details. Add repository
 skills under `.agents/skills/` for workflow transfer and project verification;
 the first documents cross-repository adaptation, while the second holds the

@@ -1,5 +1,6 @@
-# The primary Codex session receives requests and coordinates development work.
-# Models come from the signed-in Codex session so this project works across accounts.
+# The primary Codex session coordinates project work.
+# Specialist models are set in .codex/agents/*.toml.
+model = "gpt-6-sol"
 
 [agents]
 enabled = true

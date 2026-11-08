@@ -1,59 +1,63 @@
-# Grounded Travel Planner
+# Atelier — Studio ảnh AI
 
-Một webapp gợi ý điểm tham quan và lịch trình theo địa điểm/thành phố, ngày bắt
-đầu và số ngày. AI tìm thông tin qua Tavily; người dùng chat để sửa ngày giờ,
-đổi thứ tự, thêm, bỏ hoặc thay điểm tham quan.
+Webapp tạo ảnh từ prompt, chỉnh ảnh đã lưu và tạo biến thể. Ảnh cùng prompt
+được lưu trong thư viện riêng của tài khoản.
 
-Yêu cầu mới ngày **2026-10-14** thay thế toàn bộ scope POC trước đây. Tài liệu
-hiện hành là [product charter](docs/project-charter.md) và
-[kế hoạch triển khai](docs/implementation-plan.md). Chưa có deadline mới.
+## MVP
 
-## Phạm vi và stack AI đã chốt
+- Đăng ký/đăng nhập bằng email và mật khẩu.
+- Tạo ảnh mới, chỉnh sửa ảnh, tạo biến thể và mở lịch sử ảnh dẫn xuất.
+- SQLite lưu tài khoản và metadata; local volume lưu tệp ảnh.
+- FastAPI backend và React + TypeScript frontend.
+- OpenAI API hoặc endpoint OpenAI-compatible tự host, cấu hình ở server.
+- Giao diện không cho chọn provider/model hoặc thông số ảnh.
 
-| Thành phần | Vai trò |
-|---|---|
-| LangChain | Tích hợp model, agents, tools và output có cấu trúc |
-| LangGraph | State, định tuyến, bàn giao và giới hạn vòng sửa |
-| Tavily | Tìm thông tin và nguồn cho các điểm tham quan |
-| LangSmith | Trace toàn bộ lượt chat, agent và tool calls, nhóm theo phiên |
-| `gpt-5.5` | Model dùng chung cho Coordinator và Planner |
+Xem [product charter](docs/project-charter.md),
+[implementation plan](docs/implementation-plan.md) và
+[ADR 0005](docs/adr/0005-ai-image-studio.md).
 
-Bản đầu có hai agent: **Coordinator** chat với người dùng, hỏi lại, giao tác vụ
-và giải thích kết quả; **Planner** tìm thông tin, đề xuất và cập nhật lịch trình.
-Kiểm tra ngày giờ và nguồn dùng code trước khi áp dụng bản lịch mới.
+## Cấu hình
 
-Lịch trình và hội thoại chỉ tồn tại trong phiên app hiện tại. Trace được gửi
-đến LangSmith và có thể còn sau khi phiên kết thúc; app không dùng trace để
-khôi phục chuyến đi. Streamlit là đề xuất giao diện một trang có form, lịch
-trình và chat.
+Sao chép `.env.example` thành `.env` rồi đặt session secret và thông tin
+provider phù hợp. `.env` đã được Git ignore. Không đặt credential trong source,
+database hoặc log.
 
-## Trạng thái thực tế
+- Provider OpenAI dùng `IMAGE_PROVIDER=openai` và `OPENAI_API_KEY`.
+- Provider tự host dùng `IMAGE_PROVIDER=openai_compatible`,
+  `IMAGE_API_BASE_URL`, `IMAGE_MODEL` và có thể đặt `IMAGE_API_KEY`.
+- `IMAGE_STORAGE_DIR` và `APP_DATABASE_PATH` mặc định nằm trong `var/`.
 
-Đã ghi nhận yêu cầu, kiến trúc, các bước triển khai và cấu hình mẫu. Repository
-có Python development tooling cùng hook tests; chưa có application package,
-hai runtime agents, Tavily integration, webapp hoặc LangSmith trace chạy thật.
-Xem [PROJECT_STATUS.md](PROJECT_STATUS.md) để tiếp tục từ đúng trạng thái.
+Chi tiết biến môi trường: [.env.example](.env.example).
 
-## Tài liệu hiện hành
+## Chạy local
 
-- [Product charter và acceptance scenarios](docs/project-charter.md)
-- [Kế hoạch triển khai ba bước và kiến trúc hai agent](docs/implementation-plan.md)
-- [Đề xuất giao diện](docs/ui-plan.md)
-- [ADR 0004: Scope mới và stack AI](docs/adr/0004-city-sightseeing-webapp.md)
-- [Learning log hiện tại](docs/learning-log/2026-11-08-codex-workflow.md)
-- [Roadmap](docs/roadmap.html) và [progress JSON](docs/progress/roadmap-progress.json)
-- [Hướng dẫn cho Codex](AGENTS.md)
-- [Codex agents, skills và workflow dùng trên máy hoặc dự án khác](docs/codex-workflow.md)
-- [Tài liệu lịch sử đã thay thế](docs/archive/2026-10-14/README.md)
+Yêu cầu Python `>=3.10`, `uv`, Node.js và npm. Cài dependencies Python:
 
-## Cấu hình và phát triển
+```bash
+uv sync
+```
 
-[.env.example](.env.example) liệt kê cấu hình model, Tavily và LangSmith.
-Điền cấu hình thực tế vào file `.env` được Git ignore. Cấu hình mẫu không xác
-nhận tài khoản đã có quyền truy cập model hoặc các provider.
+Terminal 1 — backend:
 
-Development tooling hiện có dùng Python `>=3.10`, `uv`, `pytest`, isort,
-Black, flake8 và Ruff. Các lệnh kiểm tra:
+```bash
+uv run uvicorn image_studio.app:app --reload --app-dir src
+```
+
+Terminal 2 — frontend:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Mở địa chỉ Vite in ra terminal. Vite chuyển `/api` đến backend ở
+`http://127.0.0.1:8000`.
+
+Build frontend production bằng `cd frontend && npm ci && npm run build`. FastAPI
+phục vụ `frontend/dist` khi build tồn tại.
+
+## Kiểm tra
 
 ```bash
 uv run pytest
@@ -61,17 +65,17 @@ uv run isort --check-only . .codex/hooks/format_python.py
 uv run black --check . .codex/hooks/format_python.py
 uv run flake8 . .codex/hooks/format_python.py
 uv run ruff check . .codex/hooks/format_python.py
+cd frontend && npm ci && npm run build
 ```
 
-Lệnh chạy webapp sẽ được bổ sung khi entrypoint và runtime dependencies đã
-được triển khai. Các Codex development agents trong `.codex/` hỗ trợ phát triển;
-chúng tách biệt với Coordinator/Planner của webapp. Tooling được ghi ở
-[ADR 0001](docs/adr/0001-python-development-tooling.md).
+Unit tests dùng provider giả lập và không gọi mạng/model. Live test cần
+credential thật và provider endpoint đang hoạt động; kết quả được ghi riêng.
 
-Một prompt tiếp tục phù hợp:
+## Hồ sơ dự án
 
-```text
-Đọc AGENTS.md, PROJECT_STATUS.md, docs/project-charter.md,
-docs/implementation-plan.md và docs/learning-log/2026-10-14-scope-reset.md.
-Triển khai bước chưa hoàn thành đầu tiên của kế hoạch mới.
-```
+- [Trạng thái](PROJECT_STATUS.md)
+- [Roadmap](docs/roadmap.html) và [progress JSON](docs/progress/roadmap-progress.json)
+- [UI plan](docs/ui-plan.md)
+- [Learning log hiện tại](docs/learning-log/2026-11-08-image-studio.md)
+- [Codex workflow](docs/codex-workflow.md)
+- [Hồ sơ du lịch lịch sử](docs/archive/2026-10-14/README.md)

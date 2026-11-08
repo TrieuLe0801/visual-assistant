@@ -1,149 +1,98 @@
-# Travel Planner — Yêu cầu mới
+# Studio ảnh AI — Product Charter
 
-Ngày cập nhật: 2026-10-14
-
-Tài liệu này ghi nhận yêu cầu mới từ cuộc trao đổi hiện tại. Kế hoạch POC cũ
-không được kế thừa làm ràng buộc cho sản phẩm này. Stack AI đã chốt gồm
-LangChain, LangGraph, LangSmith, Tavily và model `gpt-5.5`. Chưa bắt đầu viết
-code ứng dụng.
+Ngày cập nhật: 2026-11-08
+Trạng thái: MVP scope đã chốt
 
 ## Mục tiêu
 
-Một webapp đơn giản giúp người dùng khám phá các điểm tham quan và nhận lịch
-trình tại một địa điểm hoặc thành phố. AI tìm kiếm thông tin trước khi gợi ý;
-người dùng tham khảo kết quả và chat để chỉnh sửa lịch trình.
+Xây webapp cá nhân để người dùng tạo ảnh từ prompt, chỉnh sửa ảnh đã lưu bằng
+prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong thư viện riêng.
 
-## Các quyết định đã chốt
+## Người dùng và luồng chính
 
-### Đầu vào ban đầu
+1. Người dùng đăng ký hoặc đăng nhập bằng email và mật khẩu.
+2. Người dùng nhập prompt để tạo ảnh mới.
+3. App lưu ảnh, prompt, trạng thái và metadata vào thư viện của tài khoản.
+4. Người dùng mở ảnh đã lưu, nhập prompt để chỉnh ảnh hoặc tạo biến thể.
+5. App lưu mỗi kết quả thành một mục lịch sử có quan hệ tới ảnh nguồn.
+6. Người dùng có thể xem lại prompt, trạng thái, thời gian tạo và tải ảnh.
+7. Sau khi đăng xuất, mở phiên khác hoặc khởi động lại app, người dùng đăng
+   nhập lại và tiếp tục xem thư viện của mình.
 
-- Địa điểm hoặc thành phố muốn tham quan.
-- Ngày bắt đầu cụ thể.
-- Số ngày tham quan do người dùng nhập.
+## Yêu cầu chức năng
 
-### Luồng sử dụng
+- Đăng ký, đăng nhập và đăng xuất bằng email và mật khẩu.
+- Tạo ảnh mới từ prompt văn bản.
+- Chỉnh sửa ảnh đã lưu bằng prompt.
+- Tạo biến thể từ ảnh đã lưu; prompt hướng dẫn biến thể là không bắt buộc.
+- Hiển thị thư viện riêng, trang chi tiết, prompt, trạng thái, quan hệ ảnh gốc
+  và ảnh dẫn xuất, cùng liên kết tải ảnh.
+- Lưu ảnh trên local volume; lưu tài khoản, prompt, metadata, trạng thái thao
+  tác và quan hệ ảnh trong SQLite.
+- Giới hạn mọi truy vấn ảnh và tệp theo chủ sở hữu.
+- Cấu hình provider mặc định ở phía máy chủ qua biến môi trường. Giao diện
+  người dùng không cho chọn provider, model, kích thước, tỉ lệ, số lượng hoặc
+  tham số ảnh.
+- Hỗ trợ OpenAI API và endpoint model tự host tương thích với hợp đồng API ảnh
+  đã chọn. Provider thiếu thao tác phải trả lỗi rõ ràng.
 
-1. Người dùng nhập ba thông tin trên và yêu cầu tạo lịch trình.
-2. AI tìm kiếm thông tin về các điểm tham quan phù hợp.
-3. App trình bày các điểm gợi ý và một lịch trình theo từng ngày, có giờ dự kiến.
-4. Người dùng chat để thay đổi ngày giờ, sắp xếp lại, thêm, bỏ hoặc thay điểm
-   tham quan.
-5. App cập nhật lịch trình đang xem và kiểm tra lại phần bị ảnh hưởng.
+## Product invariants
 
-### Phạm vi chỉnh sửa qua chat
+- Ảnh, prompt và metadata chỉ xuất hiện trong thư viện đúng tài khoản.
+- Ảnh không được báo thành công nếu provider trả lỗi, phản hồi không có ảnh
+  hợp lệ hoặc lưu tệp thất bại.
+- Lỗi thao tác được lưu với trạng thái thất bại; lỗi không được che bằng ảnh
+  nguồn hoặc ảnh trước đó.
+- Ảnh dẫn xuất tham chiếu đúng ảnh nguồn; prompt lưu đúng với yêu cầu người
+  dùng hoặc prompt mặc định được công bố cho biến thể không có hướng dẫn.
+- API key, session secret và thông tin xác thực không lưu trong DB hoặc log.
+- Không tải ảnh từ URL tùy ý do provider trả về; adapter nhận nội dung ảnh theo
+  hợp đồng đã chọn và lưu vào local volume.
+- Người dùng không tự thay đổi provider, model hoặc thông số sinh ảnh.
 
-- Đổi ngày hoặc giờ tham quan một điểm.
-- Chuyển thứ tự hoặc chuyển một điểm sang ngày khác.
-- Thêm điểm tham quan vào lịch trình.
-- Bỏ điểm không muốn ghé.
-- Thay một điểm bằng điểm khác theo yêu cầu.
-- AI tìm kiếm thông tin và nguồn cho điểm mới được thêm hoặc thay thế.
-- Lịch trình sau chỉnh sửa vẫn phải phù hợp với ngày bắt đầu và số ngày hiện
-  tại; yêu cầu thay đổi phạm vi ngày mơ hồ cần được hỏi lại.
+## Phạm vi MVP
 
-### Kết quả
+- Một webapp responsive, giao diện tiếng Việt.
+- Email và mật khẩu 10–128 ký tự; không có OAuth, quên mật khẩu hoặc vai trò
+  admin trong UI.
+- OpenAI image adapter và adapter endpoint OpenAI-compatible tự host.
+- SQLite, local volume, lịch sử ảnh bền qua phiên và lần khởi động lại.
+- Provider calls có thể chạy đồng bộ trong request ở MVP; giao diện báo trạng
+  thái đang xử lý và lỗi rõ ràng.
+- Automated tests dùng provider giả lập. Smoke test thật chạy riêng khi có
+  credential và endpoint phù hợp.
 
-- Các điểm gợi ý và lý do nên ghé.
-- Lịch trình theo ngày thực tế, với giờ bắt đầu và thời lượng dự kiến.
-- Khoảng nghỉ và thời gian di chuyển dự kiến.
-- Đường dẫn nguồn từ kết quả tìm kiếm.
-- Thông tin còn thiếu, chưa xác minh hoặc xung đột ảnh hưởng đến lịch trình.
+## Ngoài phạm vi
 
-### Phiên sử dụng
+- Chia sẻ ảnh, thanh toán, quota, moderation dashboard hoặc quản trị tài khoản.
+- Người dùng tự chọn provider/model hoặc điều khiển kích thước, tỉ lệ, số lượng
+  ảnh và thông số nâng cao.
+- Công cụ chỉnh ảnh thủ công, upload ảnh tùy ý, chat, tạo nhóm hoặc album.
+- Triển khai nhiều máy, object storage hoặc cam kết backup/khôi phục dữ liệu.
 
-- Lịch trình và lịch sử chat chỉ được giữ trong phiên hiện tại.
-- Kết thúc hoặc mất phiên có thể làm mất lịch trình và hội thoại.
-- Bản đầu không có chức năng lưu chuyến đi để mở lại hoặc tiếp tục chat ở phiên
-  sau. Giao diện cần thông báo rõ hành vi này.
-- LangSmith nhận trace các lượt hội thoại để phục vụ quan sát và gỡ lỗi. Trace
-  có thể tồn tại sau khi phiên app kết thúc theo cấu hình lưu giữ của LangSmith;
-  app không dùng trace để khôi phục chuyến đi hoặc hội thoại ở phiên mới.
+## Tình huống nghiệm thu
 
-### Stack AI và các agent
+1. Người dùng đăng ký, đăng nhập và đăng xuất được; mật khẩu không được lưu
+   dưới dạng rõ.
+2. Tạo ảnh thành công lưu được file, prompt, provider/model metadata, trạng thái
+   và thời điểm; ảnh xuất hiện trong đúng thư viện.
+3. Chỉnh ảnh đã lưu dùng đúng tệp nguồn và prompt mới; kết quả ghi nhận ảnh
+   nguồn và prompt chỉnh sửa.
+4. Tạo biến thể dùng đúng tệp nguồn; prompt hướng dẫn được lưu hoặc prompt
+   mặc định được ghi rõ trong lịch sử.
+5. Người dùng mở ảnh chi tiết, xem prompt/trạng thái/quan hệ và tải tệp.
+6. Người dùng A không đọc, tải, sửa hoặc tạo ảnh dựa trên ảnh của người dùng B.
+7. Prompt và ảnh vẫn mở được sau khi đăng xuất, đăng nhập lại và khởi động lại
+   app.
+8. Thiếu credential, provider không khả dụng, model thiếu thao tác, phản hồi
+   lỗi/không hợp lệ hoặc lưu tệp thất bại không được hiển thị như thành công.
+9. Provider/model và tham số ảnh không xuất hiện như lựa chọn cho người dùng.
+10. Offline tests bao phủ luồng chính và lỗi bằng provider giả lập. Live provider
+    checks được ghi riêng, không suy ra từ offline tests.
 
-- LangChain tích hợp model, tool và dữ liệu trả về có cấu trúc.
-- LangGraph quản lý state và điều phối các bước xử lý.
-- Tavily là công cụ tìm kiếm thông tin tham quan.
-- LangSmith trace toàn bộ lượt chat, các agent và tool calls, nhóm theo phiên.
-- Hai agent dùng chung model `gpt-5.5`.
-- Webapp có ít nhất hai agent khi vận hành. Bản đầu đề xuất đúng hai agent với
-  trách nhiệm như sau:
+## Giới hạn vận hành
 
-| Agent | Trách nhiệm |
-|---|---|
-| Coordinator | Chat thông thường, hiểu yêu cầu, hỏi lại khi cần, giao việc cho Planner và giải thích kết quả |
-| Planner | Tìm thông tin qua Tavily, đề xuất lịch trình và tạo bản lịch trình cập nhật khi người dùng yêu cầu |
-
-Coordinator là đầu mối giao tiếp với người dùng. Planner nhận yêu cầu cùng dữ
-liệu chuyến đi hiện tại và trả kết quả có cấu trúc về Coordinator. Mọi thay đổi
-lịch trình đi qua Planner và bước kiểm tra bằng code trước khi được áp dụng.
-
-## Nguyên tắc chất lượng tối thiểu
-
-- AI phải thực sự tìm kiếm trước khi trình bày kết quả như thông tin có nguồn.
-- Đường dẫn nguồn phải xuất phát từ kết quả tìm kiếm, không được tự bịa.
-- Thời lượng tham quan và thời gian di chuyển ước tính phải được ghi rõ.
-- Thiếu dữ liệu giờ mở cửa phải được thể hiện là chưa xác minh.
-- Khi phát hiện lịch bị trùng giờ hoặc trái với giờ mở cửa đã tìm được, app báo
-  xung đột và đưa phương án điều chỉnh; không âm thầm coi yêu cầu sửa là khả thi.
-- Chat phải cập nhật lịch trình hiện tại. Lịch cũ chưa đáp ứng yêu cầu mới không
-  được hiển thị như kết quả đã sửa thành công.
-- Khi thêm, bỏ hoặc thay điểm, phần lịch liên quan được sắp xếp lại và nguồn
-  được gắn đúng với các điểm còn trong lịch trình.
-- Kết quả giúp người dùng tham khảo và không bảo đảm tình trạng hoạt động hoặc
-  khả năng di chuyển tại thời điểm chuyến đi.
-
-## Các tình huống cần kiểm chứng
-
-1. Nhập địa điểm, ngày bắt đầu và số ngày hợp lệ: nhận lịch trình tương ứng kèm
-   các nguồn đã tìm được.
-2. Chat chuyển một điểm sang ngày hoặc giờ khác: lịch trình hiển thị cập nhật
-   và phần thời gian liên quan được kiểm tra lại.
-3. Chat thêm một điểm: app tìm thông tin và nguồn rồi đưa điểm vào lịch trình.
-4. Chat bỏ một điểm: điểm đó được bỏ khỏi lịch trình hiển thị và phần lịch liên
-   quan được điều chỉnh.
-5. Chat thay một điểm: điểm cũ được thay bằng điểm mới có nguồn tương ứng.
-6. Yêu cầu sửa gây xung đột với dữ liệu đã biết: app giải thích và đề xuất cách
-   điều chỉnh.
-7. Không tìm đủ thông tin hoặc tìm kiếm lỗi: app nêu rõ giới hạn dữ liệu,
-   không tự tạo nguồn hoặc thông tin xác nhận.
-8. Input hoặc yêu cầu chat mơ hồ: app hỏi lại thông tin cần thiết để tiếp tục.
-9. Phiên mới bắt đầu với lịch trình và chat trống; các phiên không dùng chung
-   dữ liệu chuyến đi.
-10. Chat thông thường được Coordinator trả lời và không làm thay đổi lịch
-    trình hoặc gọi Planner/Tavily khi không cần.
-11. Tạo hoặc sửa lịch trình được giao cho Planner; lỗi hoặc kết quả không hợp
-    lệ không được báo như đã cập nhật thành công.
-12. Các lượt chat trong cùng phiên, bao gồm child runs của hai agent và Tavily,
-    xuất hiện dưới cùng mã phiên trong LangSmith khi chạy thử tích hợp thật.
-
-## Đề xuất thiết kế, chưa phải quyết định đã chốt
-
-- Một trang gồm form nhập yêu cầu, lịch trình hiện tại và vùng chat.
-- Mỗi lịch trình tập trung vào một thành phố hoặc khu vực cụ thể.
-
-## Cấu trúc triển khai tối thiểu đề xuất
-
-1. Giao diện: form, lịch trình theo ngày và vùng chat.
-2. Coordinator và Planner dùng LangChain, được điều phối bằng LangGraph.
-3. Tavily cung cấp kết quả và URL nguồn cho Planner.
-4. Kiểm tra bằng code: input hợp lệ, lịch không trùng giờ, các điểm nằm trong
-   phạm vi ngày và các nguồn tham chiếu thực sự tồn tại trong kết quả tìm kiếm.
-5. LangSmith trace từng lượt xử lý với cùng mã phiên được truyền xuyên suốt.
-
-Một bản lịch trình có cấu trúc trong state là dữ liệu chính dùng để hiển thị
-và cập nhật. Mỗi agent có prompt và trách nhiệm riêng; hai agent có thể dùng
-chung model mà vẫn giữ vai trò tách biệt. Kiểm tra ngày giờ và nguồn là code.
-
-## Trạng thái yêu cầu
-
-Các lựa chọn sản phẩm chính đã chốt: đầu vào có ngày bắt đầu và số ngày, AI tìm
-kiếm trước khi gợi ý, chat có thể thêm/bỏ/thay điểm và sửa ngày giờ, dữ liệu chỉ
-tồn tại trong phiên hiện tại. Stack AI và model đã chốt như trên. Kế hoạch
-kiến trúc hai agent nằm tại `docs/implementation-plan.md`; Streamlit vẫn là đề xuất
-cho giao diện một trang.
-
-## Trạng thái triển khai
-
-Hiện có tài liệu yêu cầu. Chưa có code ứng dụng, dữ liệu tìm kiếm thực tế hoặc
-kết quả kiểm thử ứng dụng trong repository này.
+Local volume phù hợp cho MVP một máy. Cần backup volume và SQLite theo chính
+sách vận hành riêng. Triển khai nhiều instance hoặc yêu cầu độ bền cao cần
+đánh giá object storage và chiến lược migration. Provider giữ hoặc xử lý prompt
+và ảnh theo điều khoản của provider đã cấu hình.

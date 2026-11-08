@@ -1,106 +1,82 @@
 {
-  "version": 9,
-  "plan_id": "city-sightseeing-2026-10-14",
-  "updated": "2026-10-14",
+  "version": 10,
+  "plan_id": "ai-image-studio-2026-11-08",
+  "updated": "2026-11-08",
   "planning_status": "recorded",
-  "implementation_status": "not_started",
+  "implementation_status": "offline_verified_live_provider_checks_pending",
   "active_charter": "docs/project-charter.md",
   "active_plan": "docs/implementation-plan.md",
-  "current_log": "docs/learning-log/2026-10-14-scope-reset.md",
+  "current_log": "docs/learning-log/2026-11-08-image-studio.md",
   "deadline": null,
   "completed_artifacts": [
     "docs/project-charter.md",
     "docs/implementation-plan.md",
-    "docs/adr/0004-city-sightseeing-webapp.md",
-    ".env.example"
+    "docs/ui-plan.md",
+    "docs/adr/0005-ai-image-studio.md",
+    ".env.example",
+    "pyproject.toml",
+    "uv.lock",
+    "frontend/package.json",
+    "frontend/package-lock.json",
+    "src/image_studio/",
+    "tests/test_image_studio.py"
   ],
   "phases": [
     {
-      "id": "create",
-      "title": "Tạo lịch trình từ tìm kiếm thật",
-      "status": "not_started",
+      "id": "foundation",
+      "title": "Tài khoản, quyền sở hữu và lưu trữ bền vững",
+      "status": "complete",
       "tasks": [
-        {
-          "id": "contracts",
-          "done": false
-        },
-        {
-          "id": "two_agents_and_graph",
-          "done": false
-        },
-        {
-          "id": "tavily_and_validation",
-          "done": false
-        },
-        {
-          "id": "initial_planning_and_trace",
-          "done": false
-        }
+        {"id": "email_password_auth", "done": true},
+        {"id": "owner_scoped_library_and_files", "done": true},
+        {"id": "sqlite_and_local_volume", "done": true},
+        {"id": "restart_persistence", "done": true}
       ]
     },
     {
-      "id": "edit",
-      "title": "Chỉnh sửa lịch trình qua chat",
-      "status": "not_started",
+      "id": "provider_pipeline",
+      "title": "Generation, edit, variation và lỗi provider",
+      "status": "complete_offline",
       "tasks": [
-        {
-          "id": "reschedule_and_reorder",
-          "done": false
-        },
-        {
-          "id": "add_remove_replace",
-          "done": false
-        },
-        {
-          "id": "atomic_plan_update",
-          "done": false
-        },
-        {
-          "id": "clarification_and_conflicts",
-          "done": false
-        }
+        {"id": "typed_provider_contract", "done": true},
+        {"id": "openai_adapter", "done": true},
+        {"id": "openai_compatible_adapter", "done": true},
+        {"id": "failure_and_image_validation", "done": true},
+        {"id": "fake_provider_checks", "done": true},
+        {"id": "openai_live_smoke", "done": false},
+        {"id": "self_hosted_live_smoke", "done": false}
       ]
     },
     {
       "id": "webapp",
-      "title": "Webapp và kiểm chứng",
-      "status": "not_started",
+      "title": "Giao diện và kiểm chứng offline",
+      "status": "complete_offline",
       "tasks": [
-        {
-          "id": "form_itinerary_chat",
-          "done": false
-        },
-        {
-          "id": "session_isolation",
-          "done": false
-        },
-        {
-          "id": "offline_behavior_checks",
-          "done": false
-        },
-        {
-          "id": "live_integrations_and_thread_traces",
-          "done": false
-        }
+        {"id": "auth_library_detail_ui", "done": true},
+        {"id": "create_edit_variation_ui", "done": true},
+        {"id": "production_frontend_build", "done": true},
+        {"id": "spa_static_serving", "done": true},
+        {"id": "owner_isolation_and_restart_tests", "done": true}
       ]
     }
   ],
   "verification": {
-    "status": "passed",
-    "document_links": 61,
-    "progress_schema": "passed",
-    "environment_template": "passed",
-    "existing_hook_tests": "2 passed",
-    "lock": "passed",
+    "status": "passed_with_live_integrations_pending",
+    "uv_lock_check": "passed",
+    "uv_sync_locked": "passed",
+    "image_studio_tests": "15 passed",
+    "full_pytest_suite": "17 passed including 2 development-hook tests",
     "isort": "passed",
     "black": "passed",
     "flake8": "passed",
     "ruff": "passed",
+    "npm_ci_offline": "passed; no vulnerabilities reported",
+    "frontend_build": "passed; TypeScript and Vite 8.3.6",
     "diff_check": "passed",
-    "application_checks": "N/A - no application implemented",
-    "live_provider_checks": "not_run",
-    "independent_review": "passed - 65 local links, approved drafts and 5 historical snapshots verified"
+    "live_openai": "not_run; credentials not supplied",
+    "live_self_hosted": "not_run; endpoint/credentials not supplied",
+    "browser_e2e": "not_run"
   },
-  "historical_snapshot": "docs/archive/2026-10-14/roadmap-progress.json",
-  "note": "Old completion counts and delivery dates do not apply to the new scope. Development tooling is retained and is not runtime implementation progress."
+  "historical_snapshot": "docs/archive/2026-10-14/sightseeing-implementation-plan.md",
+  "note": "Offline implementation is complete. Do not claim live provider behavior until separate credentialed smoke checks pass."
 }

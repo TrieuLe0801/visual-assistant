@@ -5,26 +5,32 @@ This repository keeps its Codex development workflow in Git:
 | Path | Purpose |
 |---|---|
 | `AGENTS.md` | Project rules and required reading |
-| `.codex/config.toml` | Agent concurrency; models inherit from the session |
-| `.codex/agents/*.toml` | Manager, planner, coding, and testing roles |
-| `.agents/skills/*/SKILL.md` | Reusable workflow and project verification skills |
+| `.codex/config.toml` | Coordinator model and agent concurrency |
+| `.codex/agents/*.toml` | Manager, planner, coding, testing, and deployment roles with model assignments |
+| `.agents/skills/*/SKILL.md` | Workflow transfer, project verification, and deployment skills |
 | `.codex/hooks.json`, `.codex/hooks/format_python.py` | Python edit hook |
 | `pyproject.toml`, `uv.lock` | Development tools and locked dependencies |
 
-The Codex development agents are separate from the app's Coordinator and
-Planner runtime agents. The role files stay generic; `AGENTS.md` and project
-records carry travel-planner decisions.
+The Codex development agents are separate from the app's image-provider
+adapters. The coordinator and planner use `gpt-6-sol`. Coding, testing, and
+deployment use `gpt-5.6-luna`. `AGENTS.md` and project records carry active
+image-studio decisions.
+
+For Codex configuration and custom-agent schema, see the [configuration
+reference](https://developers.openai.com/codex/config-reference/) and
+[subagent guide](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
 ## Another machine, same repository
 
 1. Clone the repository and open it as a trusted Codex project. Project config
    and custom agents load in trusted project sessions. Review the hook before
    enabling it through Codex's hook trust flow.
-2. Install Codex and `uv`, then run `uv sync`. Choose a model available to the
-   signed-in account; development subagents inherit it.
+2. Install Codex and `uv`, then run `uv sync`. Confirm configured models are
+   available to the signed-in account. Run `codex debug models` to inspect the
+   local Codex model catalog.
 3. Set up credentials in ignored local environment files. Do not transfer
    `.env`, personal Codex config, plugin cache, or credentials through Git.
-4. Check that Codex discovers the four agents and two repository skills. Run
+4. Check that Codex discovers the five agents and three repository skills. Run
    the verification commands in `AGENTS.md`.
 
 Personal skills in `~/.agents/skills/` or `~/.codex/skills/`, including
@@ -36,12 +42,13 @@ need separate setup; they are not repository files.
 ## Another repository
 
 Copy `.codex/agents/` and the selected `.agents/skills/` folders. Copy
-`.codex/config.toml` after checking concurrency needs. Development models
-inherit from the signed-in Codex session.
+`.codex/config.toml` after checking coordinator model and concurrency needs.
+Confirm each assigned model appears in the destination account's Codex model
+catalog.
 Rewrite `AGENTS.md` from the destination's actual decisions. Copy the hook
 only for a compatible Python project with its formatting tools installed.
-Remove travel-planner product rules, source paths, and verification commands
-that do not apply. Run `$codex-workflow-transfer` to inventory and check the
+Remove product-specific rules, source paths, and verification commands that do
+not apply. Run `$codex-workflow-transfer` to inventory and check the
 result before committing it to the destination repository.
 
 ## Skill checks

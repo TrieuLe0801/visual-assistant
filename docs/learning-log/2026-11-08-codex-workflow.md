@@ -1,7 +1,7 @@
 # Learning Log — Portable Codex workflow
 
 Date: 2026-11-08
-Status: Current
+Status: Historical tooling change; product work continues in the current image-studio log.
 
 ## Objective
 
