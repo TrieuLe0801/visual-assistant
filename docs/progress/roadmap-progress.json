@@ -1,0 +1,106 @@
+{
+  "version": 9,
+  "plan_id": "city-sightseeing-2026-10-14",
+  "updated": "2026-10-14",
+  "planning_status": "recorded",
+  "implementation_status": "not_started",
+  "active_charter": "docs/project-charter.md",
+  "active_plan": "docs/implementation-plan.md",
+  "current_log": "docs/learning-log/2026-10-14-scope-reset.md",
+  "deadline": null,
+  "completed_artifacts": [
+    "docs/project-charter.md",
+    "docs/implementation-plan.md",
+    "docs/adr/0004-city-sightseeing-webapp.md",
+    ".env.example"
+  ],
+  "phases": [
+    {
+      "id": "create",
+      "title": "Tạo lịch trình từ tìm kiếm thật",
+      "status": "not_started",
+      "tasks": [
+        {
+          "id": "contracts",
+          "done": false
+        },
+        {
+          "id": "two_agents_and_graph",
+          "done": false
+        },
+        {
+          "id": "tavily_and_validation",
+          "done": false
+        },
+        {
+          "id": "initial_planning_and_trace",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "edit",
+      "title": "Chỉnh sửa lịch trình qua chat",
+      "status": "not_started",
+      "tasks": [
+        {
+          "id": "reschedule_and_reorder",
+          "done": false
+        },
+        {
+          "id": "add_remove_replace",
+          "done": false
+        },
+        {
+          "id": "atomic_plan_update",
+          "done": false
+        },
+        {
+          "id": "clarification_and_conflicts",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "webapp",
+      "title": "Webapp và kiểm chứng",
+      "status": "not_started",
+      "tasks": [
+        {
+          "id": "form_itinerary_chat",
+          "done": false
+        },
+        {
+          "id": "session_isolation",
+          "done": false
+        },
+        {
+          "id": "offline_behavior_checks",
+          "done": false
+        },
+        {
+          "id": "live_integrations_and_thread_traces",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "status": "passed",
+    "document_links": 61,
+    "progress_schema": "passed",
+    "environment_template": "passed",
+    "existing_hook_tests": "2 passed",
+    "lock": "passed",
+    "isort": "passed",
+    "black": "passed",
+    "flake8": "passed",
+    "ruff": "passed",
+    "diff_check": "passed",
+    "application_checks": "N/A - no application implemented",
+    "live_provider_checks": "not_run",
+    "independent_review": "passed - 65 local links, approved drafts and 5 historical snapshots verified"
+  },
+  "historical_snapshot": "docs/archive/2026-10-14/roadmap-progress.json",
+  "note": "Old completion counts and delivery dates do not apply to the new scope. Development tooling is retained and is not runtime implementation progress."
+}
