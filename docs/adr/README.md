@@ -10,6 +10,8 @@ The active product/runtime scope is defined by ADR 0005 and the current
 | [0003 — Previous POC UI](0003-streamlit-poc-ui.md) | Superseded by 0004 |
 | [0004 — Sightseeing webapp and two runtime agents](0004-city-sightseeing-webapp.md) | Superseded by 0005 |
 | [0005 — AI image studio product scope and storage](0005-ai-image-studio.md) | Accepted |
+| [0006 — LangChain model routing and LangSmith tracing](0006-langchain-model-routing-langsmith-tracing.md) | Accepted |
+| [0007 — Single-host Compose deployment with ngrok](0007-single-host-compose-ngrok.md) | Accepted |
 
 Use sequential filenames. Include status, context, decision, alternatives,
 consequences and review triggers in each new record.

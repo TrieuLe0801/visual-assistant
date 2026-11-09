@@ -11,20 +11,16 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from image_studio.app import create_app
-from image_studio.config import make_settings
-from image_studio.providers import (
+from image_studio.ai import (
     GeneratedImage,
     ImageProviderError,
     OpenAICompatibleProvider,
     UnsupportedImageOperation,
 )
-from image_studio.storage import (
-    MAX_IMAGE_BYTES,
-    ImageStorageError,
-    LocalImageStorage,
-    StoredImage,
-)
+from image_studio.app import create_app
+from image_studio.config import make_settings
+from image_studio.storage import LocalImageStorage, StoredImage
+from image_studio.utils.image import MAX_IMAGE_BYTES, ImageStorageError
 
 
 def _one_pixel_png() -> bytes:

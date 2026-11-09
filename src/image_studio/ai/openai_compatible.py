@@ -1,47 +1,18 @@
-"""Typed image provider interface and OpenAI-compatible adapter."""
+"""OpenAI and OpenAI-compatible image API adapter."""
 
 from __future__ import annotations
 
 import base64
 import binascii
-from dataclasses import dataclass
-from typing import Protocol
 
 import httpx
 
-from .config import Settings
-from .storage import MAX_IMAGE_BYTES
-
-
-class ImageProviderError(Exception):
-    """A provider call failed with a user-safe message."""
-
-
-class UnsupportedImageOperation(ImageProviderError):
-    """The configured provider cannot perform the requested operation."""
-
-
-@dataclass(frozen=True)
-class GeneratedImage:
-    data: bytes
-    mime_type: str
-
-
-class ImageProvider(Protocol):
-    """Provider-independent operations required by the application."""
-
-    name: str
-    model: str
-
-    def generate(self, prompt: str) -> GeneratedImage: ...
-
-    def edit(
-        self, prompt: str, source: bytes, source_mime_type: str
-    ) -> GeneratedImage: ...
-
-    def variation(
-        self, prompt: str, source: bytes, source_mime_type: str
-    ) -> GeneratedImage: ...
+from ..utils.image import IMAGE_EXTENSIONS, MAX_IMAGE_BYTES
+from .provider import (
+    GeneratedImage,
+    ImageProviderError,
+    UnsupportedImageOperation,
+)
 
 
 class OpenAICompatibleProvider:
@@ -120,11 +91,7 @@ class OpenAICompatibleProvider:
     def _post_edit(
         self, prompt: str, source: bytes, source_mime_type: str
     ) -> dict[str, object]:
-        extension = {
-            "image/png": "png",
-            "image/jpeg": "jpg",
-            "image/webp": "webp",
-        }.get(source_mime_type)
+        extension = IMAGE_EXTENSIONS.get(source_mime_type)
         if extension is None:
             raise UnsupportedImageOperation(
                 "The source image format is not supported for editing."
@@ -173,53 +140,6 @@ class OpenAICompatibleProvider:
         if not isinstance(payload, dict):
             raise ImageProviderError("Image provider returned an invalid response.")
         return payload
-
-
-class UnavailableImageProvider:
-    """Delay missing provider configuration until image work is requested."""
-
-    name: str
-
-    def __init__(self, name: str, model: str, message: str) -> None:
-        self.name = name
-        self.model = model
-        self._message = message
-
-    def generate(self, prompt: str) -> GeneratedImage:
-        raise ImageProviderError(self._message)
-
-    def edit(self, prompt: str, source: bytes, source_mime_type: str) -> GeneratedImage:
-        raise ImageProviderError(self._message)
-
-    def variation(
-        self, prompt: str, source: bytes, source_mime_type: str
-    ) -> GeneratedImage:
-        raise ImageProviderError(self._message)
-
-
-def build_provider(settings: Settings) -> ImageProvider:
-    """Construct provider from validated Settings without exposing secrets."""
-    provider_name = settings.provider_name
-    model = settings.model_name
-    api_key = settings.api_key
-    base_url = settings.api_base_url
-    if provider_name not in {"openai", "openai_compatible"}:
-        raise ValueError("Unsupported IMAGE_PROVIDER value.")
-    if not base_url:
-        return UnavailableImageProvider(
-            provider_name, model, "Image provider URL is not configured."
-        )
-    if provider_name == "openai" and not api_key:
-        return UnavailableImageProvider(
-            provider_name, model, "Image provider credentials are not configured."
-        )
-    return OpenAICompatibleProvider(
-        base_url=base_url,
-        api_key=str(api_key) if api_key else None,
-        model=model,
-        provider_name=provider_name,
-        timeout_seconds=settings.provider_timeout_seconds,
-    )
 
 
 def _image_from_response(payload: dict[str, object]) -> GeneratedImage:

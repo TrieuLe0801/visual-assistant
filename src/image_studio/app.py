@@ -10,17 +10,12 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from .ai import ImageOperationError, ImageProvider, ImageService, build_provider
 from .config import Settings
 from .database import Database, ImageRecord, User
-from .providers import (
-    GeneratedImage,
-    ImageProvider,
-    ImageProviderError,
-    UnsupportedImageOperation,
-    build_provider,
-)
-from .security import SessionCodec, hash_password, verify_password
-from .storage import ImageStorageError, LocalImageStorage
+from .storage import LocalImageStorage
+from .utils.image import IMAGE_EXTENSIONS, ImageStorageError
+from .utils.security import SessionCodec, hash_password, verify_password
 
 SESSION_COOKIE_NAME = "image_studio_session"
 MAX_PROMPT_LENGTH = 4000
@@ -71,9 +66,10 @@ def create_app(
     settings = settings or Settings.from_env()
     settings.validate()
     session_codec = SessionCodec(settings.session_secret, settings.session_ttl_seconds)
-    database = database or Database(settings.database_path)
+    database = database or Database(settings.database)
     storage = storage or LocalImageStorage(settings.image_storage_path)
     provider = provider or build_provider(settings)
+    image_service = ImageService(database, storage, provider)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -204,9 +200,7 @@ def create_app(
     ) -> ImageOutput:
         prompt = _validate_prompt(payload.prompt)
         return _run_operation(
-            database=database,
-            storage=storage,
-            provider=provider,
+            service=image_service,
             owner_id=user.id,
             prompt=prompt,
             operation="generate",
@@ -225,9 +219,7 @@ def create_app(
         parent = _owned_image(database, user.id, image_id)
         source, mime_type = _read_source(storage, parent)
         return _run_operation(
-            database=database,
-            storage=storage,
-            provider=provider,
+            service=image_service,
             owner_id=user.id,
             prompt=prompt,
             operation="edit",
@@ -252,9 +244,7 @@ def create_app(
         parent = _owned_image(database, user.id, image_id)
         source, mime_type = _read_source(storage, parent)
         return _run_operation(
-            database=database,
-            storage=storage,
-            provider=provider,
+            service=image_service,
             owner_id=user.id,
             prompt=prompt,
             operation="variation",
@@ -265,6 +255,7 @@ def create_app(
     app.state.database = database
     app.state.storage = storage
     app.state.provider = provider
+    app.state.image_service = image_service
     app.state.settings = settings
     app.state.session_codec = session_codec
     _mount_frontend(app, settings.frontend_dist_path)
@@ -273,92 +264,29 @@ def create_app(
 
 def _run_operation(
     *,
-    database: Database,
-    storage: LocalImageStorage,
-    provider: ImageProvider,
+    service: ImageService,
     owner_id: str,
     prompt: str,
     operation: str,
     parent_id: str | None,
     source: tuple[bytes, str] | None = None,
 ) -> ImageOutput:
-    record = database.create_image_operation(
-        owner_id=owner_id,
-        prompt=prompt,
-        operation=operation,
-        parent_id=parent_id,
-        provider=provider.name,
-        model=provider.model,
-    )
-    stored_path: str | None = None
     try:
-        if operation == "generate":
-            result = provider.generate(prompt)
-        elif operation == "edit":
-            if source is None:
-                raise ImageProviderError("Source image is unavailable.")
-            edit = getattr(provider, "edit", None)
-            if not callable(edit):
-                raise UnsupportedImageOperation(
-                    "Configured image provider does not support editing."
-                )
-            result = edit(prompt, source[0], source[1])
-        elif operation == "variation":
-            if source is None:
-                raise ImageProviderError("Source image is unavailable.")
-            variation = getattr(provider, "variation", None)
-            if not callable(variation):
-                raise UnsupportedImageOperation(
-                    "Configured image provider does not support variations."
-                )
-            result = variation(prompt, source[0], source[1])
-        else:
-            raise UnsupportedImageOperation("This image operation is not supported.")
-        if not isinstance(result, GeneratedImage):
-            raise ImageProviderError("Image provider returned an invalid image result.")
-        stored = storage.save(owner_id, result.data, result.mime_type)
-        stored_path = stored.relative_path
-        database.mark_image_succeeded(
-            record.id,
-            file_path=stored.relative_path,
-            mime_type=stored.mime_type,
-            size_bytes=stored.size_bytes,
+        record = service.run(
+            owner_id=owner_id,
+            prompt=prompt,
+            operation=operation,
+            parent_id=parent_id,
+            source=source,
         )
-    except ImageStorageError as exc:
-        if stored_path:
-            storage.remove(stored_path)
-        database.mark_image_failed(record.id, str(exc))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        ) from exc
-    except (UnsupportedImageOperation, ImageProviderError) as exc:
-        if stored_path:
-            storage.remove(stored_path)
-        database.mark_image_failed(record.id, str(exc))
-        code = (
-            status.HTTP_501_NOT_IMPLEMENTED
-            if isinstance(exc, UnsupportedImageOperation)
-            else status.HTTP_502_BAD_GATEWAY
-        )
-        raise HTTPException(status_code=code, detail=str(exc)) from exc
-    except OSError as exc:
-        if stored_path:
-            storage.remove(stored_path)
-        database.mark_image_failed(record.id, "Image storage is unavailable.")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Image storage is unavailable.",
-        ) from exc
-    except Exception as exc:
-        if stored_path:
-            storage.remove(stored_path)
-        database.mark_image_failed(record.id, "Image operation failed.")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Image operation failed. Please try again.",
-        ) from exc
-    return _image_output(database.get_image(owner_id, record.id))
+    except ImageOperationError as exc:
+        code = {
+            "storage": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "unsupported": status.HTTP_501_NOT_IMPLEMENTED,
+            "provider": status.HTTP_502_BAD_GATEWAY,
+        }[exc.reason]
+        raise HTTPException(status_code=code, detail=exc.detail) from exc
+    return _image_output(record)
 
 
 def _mount_frontend(app: FastAPI, distribution: Path) -> None:
@@ -472,9 +400,7 @@ def _image_output(record: ImageRecord | None) -> ImageOutput:
 
 
 def _mime_extension(mime_type: str) -> str:
-    return {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}.get(
-        mime_type, "img"
-    )
+    return IMAGE_EXTENSIONS.get(mime_type, "img")
 
 
 app = create_app()

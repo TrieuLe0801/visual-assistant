@@ -25,9 +25,43 @@ database hoặc log.
 - Provider OpenAI dùng `IMAGE_PROVIDER=openai` và `OPENAI_API_KEY`.
 - Provider tự host dùng `IMAGE_PROVIDER=openai_compatible`,
   `IMAGE_API_BASE_URL`, `IMAGE_MODEL` và có thể đặt `IMAGE_API_KEY`.
-- `IMAGE_STORAGE_DIR` và `APP_DATABASE_PATH` mặc định nằm trong `var/`.
+- `IMAGE_STORAGE_PATH` và `IMAGE_DATABASE_PATH` mặc định nằm trong `var/`.
+
+Để quản lý nhiều model, đặt `IMAGE_MODEL_CATALOG` thành JSON ánh xạ alias tới
+`provider` và `model`, rồi đặt `IMAGE_ACTIVE_MODEL` bằng alias cần chạy. Ví dụ:
+
+```env
+IMAGE_MODEL_CATALOG={"cloud":{"provider":"openai","model":"gpt-image-1"},"local":{"provider":"openai_compatible","model":"local-image-model"}}
+IMAGE_ACTIVE_MODEL=local
+```
+
+LangChain Core chọn model trong catalog cho cả tạo, chỉnh sửa và biến thể.
+Ứng dụng đọc cấu hình khi khởi động; đổi alias cần khởi động lại backend.
+Endpoint và credential vẫn lấy từ `OPENAI_BASE_URL`/`OPENAI_API_KEY` hoặc
+`IMAGE_API_BASE_URL`/`IMAGE_API_KEY`. Model thiếu thao tác trả lỗi rõ ràng.
+Không có API hoặc giao diện để người dùng chọn model.
+
+Để bật LangSmith, đặt `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY` và
+`LANGSMITH_PROJECT` trong `.env` bị ignore hoặc secret store của môi trường
+triển khai. Trace chứa operation, trạng thái, ID ảnh, provider và model;
+không chứa prompt, ảnh nguồn hoặc ảnh kết quả. Nếu không cấu hình, tracing tắt.
+Chưa có xác nhận gửi trace thật tới LangSmith; test hiện tại chỉ kiểm tra
+trace cục bộ, không gọi mạng.
 
 Chi tiết biến môi trường: [.env.example](.env.example).
+
+## Cấu trúc backend
+
+- `src/image_studio/app.py`: route FastAPI, xác thực request và ánh xạ response.
+- `src/image_studio/ai/`: hợp đồng provider, adapter OpenAI-compatible, factory
+  và service điều phối thao tác ảnh. `model_router.py` dùng LangChain Core để
+  chọn model phía server.
+- `src/image_studio/database/settings.py`: cấu hình SQLite từ môi trường.
+- `src/image_studio/database/connection.py`: kết nối và transaction SQLite.
+- `src/image_studio/database/models.py`, `schema.py`, `repository.py`: bản ghi,
+  schema và truy vấn dữ liệu theo chủ sở hữu.
+- `src/image_studio/storage.py`: lưu tệp ảnh trên local volume.
+- `src/image_studio/utils/`: session và mật khẩu, kiểm tra ảnh, thời gian UTC.
 
 ## Chạy local
 
@@ -57,6 +91,22 @@ Mở địa chỉ Vite in ra terminal. Vite chuyển `/api` đến backend ở
 Build frontend production bằng `cd frontend && npm ci && npm run build`. FastAPI
 phục vụ `frontend/dist` khi build tồn tại.
 
+## Docker Compose và ngrok
+
+Dockerfile tạo image backend và frontend. Compose chạy container `database`
+để khởi tạo SQLite rồi thoát, backend FastAPI và frontend Nginx. SQLite/ảnh
+nằm trong một Docker volume; cổng frontend 8000 chỉ mở trên localhost. Ngrok
+chạy trong container riêng khi bật profile `publish`, với Basic Auth.
+
+Chạy `python3 scripts/init-deployment-secrets.py`, rồi
+`docker compose build app frontend` và `docker compose up -d --wait`.
+Đặt `NGROK_AUTHTOKEN` và URL khả dụng
+(`NGROK_URL`, nếu cần) trong `.env` bị ignore. Sau đó chạy
+`docker compose --profile publish up -d --wait ngrok`.
+
+Xem [hướng dẫn triển khai, backup và restore](docs/deployment-compose-ngrok.md).
+Không nhập provider key hoặc ngrok token vào source hay Compose file.
+
 ## Kiểm tra
 
 ```bash
@@ -78,4 +128,5 @@ credential thật và provider endpoint đang hoạt động; kết quả đư�
 - [UI plan](docs/ui-plan.md)
 - [Learning log hiện tại](docs/learning-log/2026-11-08-image-studio.md)
 - [Codex workflow](docs/codex-workflow.md)
+- [Compose + ngrok deployment](docs/deployment-compose-ngrok.md)
 - [Hồ sơ du lịch lịch sử](docs/archive/2026-10-14/README.md)

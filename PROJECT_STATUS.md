@@ -31,6 +31,17 @@ planner completion counts carry forward.
   details, edit, variation and download.
 - Added offline tests with fake provider and HTTP transport. Full suite passes.
 - Added frontend lockfile and recorded the active environment baseline.
+- Split backend into AI services, SQLite settings/connection/repository modules,
+  and reusable security/image/time utilities without changing API routes.
+- Added server-selected LangChain Core model routing and metadata-only LangSmith
+  operation traces; see [ADR 0006](docs/adr/0006-langchain-model-routing-langsmith-tracing.md).
+- Built an arm64 Docker image and healthy single-host Compose container with a
+  persistent SQLite/image volume and file-backed session secret. A stopped-app
+  backup restored successfully into a separate verification volume; see
+  [deployment guide](docs/deployment-compose-ngrok.md) and [ADR 0007](docs/adr/0007-single-host-compose-ngrok.md).
+- Split Compose into a one-shot SQLite schema initializer, FastAPI backend,
+  Nginx frontend and optional ngrok publish service. Backend and frontend are
+  healthy; ngrok configuration validates without opening a public tunnel.
 
 ## Implementation status
 
@@ -38,15 +49,19 @@ planner completion counts carry forward.
 |---|---|---|
 | 1. Tài khoản, quyền sở hữu và lưu trữ bền vững | Hoàn thành | Auth, owner-isolation, file access và restart tests |
 | 2. Generation, edit, variation và provider errors | Hoàn thành offline | Fake-provider, adapter, unsupported capability, invalid/oversized image và storage-failure tests |
+| 2a. LangChain model routing và LangSmith tracing | Hoàn thành offline | 6 model-routing/trace tests; chưa xác nhận LangSmith remote |
 | 3. Giao diện và production build | Hoàn thành offline | SPA/static tests; TypeScript + Vite build passed |
 | 4. Live OpenAI/self-hosted smoke tests | Chưa chạy | Cần endpoint và credentials; không có model call trong lần kiểm chứng này |
+| 5. Docker Compose local deployment | Hoàn thành | backend/frontend images, database init exit 0, both long-running services healthy, HTTP proxy, backup/restore |
+| 6. Ngrok public tunnel | Compose sẵn sàng; chưa publish | Ngrok container/secret/profile config kiểm tra; chờ `NGROK_AUTHTOKEN` và domain khả dụng |
 
 ## Now
 
-1. Configure `SESSION_SECRET` before any non-development deployment.
-2. When credentials and endpoint are available, run separate OpenAI and
+1. Supply an available ngrok account/domain configuration, then verify the
+   public HTTPS endpoint with Basic Auth.
+2. When provider credentials and endpoint are available, run separate OpenAI and
    self-hosted generation/edit/variation smoke checks.
-3. Define a backup procedure for SQLite and the local image volume before
+3. Schedule off-host copies of the documented stopped-app backup before
    storing production data.
 
 ## Next
@@ -58,20 +73,37 @@ planner completion counts carry forward.
 ## Dependencies and limits
 
 The default provider/model are admin configuration; the UI does not expose
-them. Live provider behavior remains unverified. SQLite and local files target a
-single application host; backup and multi-host coordination are not included.
+them. `IMAGE_MODEL_CATALOG` and `IMAGE_ACTIVE_MODEL` select a server-side model
+at startup. LangSmith tracing is opt-in and excludes prompt/image content.
+Live provider behavior and remote trace delivery remain unverified. SQLite and local files target a
+single application host; a manual backup/restore path exists, but scheduled
+off-host backup and multi-host coordination are not included.
 Provider calls run synchronously, so a request can remain open while an image
 is generated.
 
 ## Verification
 
 - Project Python: CPython 3.10.21 via uv; system `python3` is 3.9.6.
-- `uv sync --locked`: passed; 37 packages checked.
-- `uv lock --check`: passed; 41 packages resolved.
+- `uv sync --locked`: passed; 58 packages checked.
+- `uv lock --check`: passed; 66 packages resolved.
 - `uv run pytest tests/test_image_studio.py`: 15 passed.
-- `uv run pytest`: 17 passed (15 application tests and 2 development-hook tests).
+- `uv run pytest tests/test_model_routing.py`: 6 passed.
+- `uv run pytest`: 30 passed (28 application/deployment tests and 2 development-hook tests).
+- `uv run pytest tests/test_database.py tests/test_image_studio.py`: 17 passed.
 - isort, Black, flake8 and Ruff standard checks: passed.
 - `npm ci --offline`: passed; no vulnerabilities reported.
 - `npm run build`: passed with Vite 8.3.6.
 - `git diff --check`: passed.
-- Live provider calls and browser-driven E2E: not run.
+- `docker compose config --quiet`, `docker compose --profile publish config --quiet`,
+  `docker compose build app frontend` and `docker compose up -d --wait`: passed.
+- Database initializer exited 0. Backend and frontend healthy. Local
+  `/api/health`, frontend root and SPA route: HTTP 200; unauthenticated
+  `/api/images`: HTTP 401. Backend has no host port.
+- Compose secret and Secure cookie configuration confirmed inside backend.
+  Internal Compose-network request to `frontend:80/api/health`: HTTP 200.
+- Stopped-app volume backup restored into a separate volume; SQLite integrity
+  check: `ok`; image directory present.
+- Ngrok Compose service, Basic Auth secret mount and shell syntax validated.
+  Tunnel not started; `NGROK_AUTHTOKEN` and `NGROK_URL` remain unset in `.env`.
+  Previous host CLI attempt hit `ERR_NGROK_334` on an occupied domain.
+- Live provider, LangSmith remote delivery, public HTTPS and browser-driven E2E checks: not run.

@@ -95,3 +95,147 @@ coordination are not implemented. Provider calls are synchronous.
 - Application tests were not run for this configuration change.
 - `codex debug` does not support `--strict-config`; TOML parsing above checks
   project and agent syntax directly.
+
+## Backend module refactor — 2026-11-08
+
+- Moved provider contracts, OpenAI-compatible adapter, provider construction
+  and image-operation coordination into `src/image_studio/ai/`. FastAPI routes
+  now translate service failures into HTTP responses.
+- Split SQLite environment settings, connection/transaction handling, schema,
+  record models and owner-scoped repository into `src/image_studio/database/`.
+- Moved reusable password/session, image validation and UTC timestamp helpers
+  into `src/image_studio/utils/`. Kept local file persistence in `storage.py`.
+- Added tests for database path configuration, transaction rollback and SQLite
+  foreign-key enforcement. Updated imports in existing API tests and documented
+  backend modules in `README.md`.
+- The refactor does not change a confirmed architecture decision, so ADR 0005
+  remains in force. No roadmap item was closed by this maintenance change.
+
+### Verification
+
+- `uv run pytest tests/test_database.py tests/test_image_studio.py`: 17 passed.
+- `uv run pytest`: 23 passed, including 2 development-hook tests and 4
+  model-routing tests added concurrently.
+- `uv run isort --check-only . .codex/hooks/format_python.py`: passed.
+- `uv run black --check . .codex/hooks/format_python.py`: passed.
+- `uv run flake8 . .codex/hooks/format_python.py`: passed.
+- `uv run ruff check . .codex/hooks/format_python.py`: passed after fixing an
+  import rule in the concurrent model-router addition.
+- `uv lock --check`: passed; 66 packages resolved with concurrent dependency
+  additions present in the workspace.
+- `git diff --check`: passed.
+- `npm run build` in `frontend/`: passed (TypeScript and Vite build).
+- Live provider calls, deployed-environment checks and browser-driven E2E:
+  not run. This request changed local code structure only.
+
+## LangChain model routing and LangSmith tracing — 2026-11-08
+
+- Added LangChain Core runnable alternatives over the existing typed image
+  provider contract. `IMAGE_MODEL_CATALOG` defines server-side aliases and
+  `IMAGE_ACTIVE_MODEL` selects one at startup. Legacy single-model variables
+  still work when the catalog is absent.
+- Added LangSmith operation tracing, opt-in through environment variables.
+  Traces contain operation, source presence, image ID, status, provider and
+  model. Automatic runnable tracing is disabled around prompts and image bytes.
+- Added offline tests for selection across generate/edit/variation, catalog
+  parsing, invalid aliases, factory selection, trace redaction and credential
+  omission from configuration representations. Added
+  ADR 0006 and documented configuration in `.env.example` and `README.md`.
+- No hosting target was specified. No external deployment was performed.
+  SQLite/image-volume backup and restore remain a prerequisite for production
+  data, and `SESSION_SECRET` must come from the deployment secret store.
+
+### Verification
+
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest tests/test_model_routing.py -q`: 6 passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest`: 25 passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run isort --check-only . .codex/hooks/format_python.py`: passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run black --check . .codex/hooks/format_python.py`: passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run flake8 . .codex/hooks/format_python.py`: passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run ruff check . .codex/hooks/format_python.py`: passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv lock --check`: passed; 66 packages resolved.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv sync --locked`: passed; 58 packages checked.
+- `npm run build` in `frontend/`: passed with TypeScript and Vite 8.3.6.
+- `git diff --check`: passed.
+- Live OpenAI, self-hosted and LangSmith remote checks: not run. Credentials
+  and a live self-hosted endpoint were not provided.
+
+## Docker Compose and ngrok deployment — 2026-11-08
+
+- Added a multi-stage Node/Python Dockerfile, `.dockerignore`, single-host
+  `compose.yaml`, persistent named volume, app health check and localhost-only
+  port binding. Compose injects the session secret from a file-backed secret.
+- Added ignored local secret initializer and ngrok publish script. The ngrok
+  endpoint uses Basic Auth before the app login. Added backup/restore and
+  rollback instructions, plus ADR 0007.
+- Generated a fresh ignored session secret and Basic Auth credential. No secret
+  value was printed or committed. No provider or LangSmith key was present.
+- Built and started the app container on Docker Desktop arm64. Stopped the app
+  for a consistent volume backup, restored to a separate test volume, checked
+  SQLite integrity and image directory, then removed that test volume. The
+  initial verification archive is in ignored `backups/`.
+- The host ngrok config has an authtoken, but its default dev domain is already
+  online elsewhere. The attempted publish returned `ERR_NGROK_334`. The user
+  will provide new ngrok variables. No public URL is claimed yet.
+
+### Verification
+
+- `docker compose config --quiet`: passed.
+- `docker compose build app`: passed; `image-studio:local` is linux/arm64.
+- `docker compose up -d --build --wait`: passed; app container healthy.
+- `curl -fsS http://127.0.0.1:8000/api/health`: `{"status":"ok"}`.
+- `curl -fsS http://127.0.0.1:8000/`: returned built React HTML.
+- `docker compose exec -T app python -c ...`: session secret file loaded,
+  Secure cookies enabled, image storage path `/data/images`.
+- Stopped-app `docker run ... tar -czf` backup and separate-volume `tar -xzf`
+  restore: passed. `PRAGMA integrity_check`: `ok`; image directory present.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest tests/test_deployment_config.py -q`: 2 passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest`: 27 passed.
+- Standard isort, Black, flake8 and Ruff checks: passed.
+- `npm run build`, `sh -n scripts/ngrok-publish.sh` and `git diff --check`: passed.
+- Live provider, LangSmith remote delivery, public HTTPS and browser E2E:
+  not run or not established. No provider credentials or new ngrok endpoint
+  variables were supplied for those checks.
+
+### ngrok `.env` configuration follow-up
+
+- Updated host ngrok launcher to parse `NGROK_AUTHTOKEN` and optional
+  `NGROK_URL` from ignored `.env` using `python-dotenv`. It does not shell-source
+  `.env` or pass the token to the app container. Existing secret files and the
+  ngrok CLI account config remain fallbacks.
+- Added offline tests for `.env` precedence, URL validation and file fallback.
+  The new ngrok variables were not present when this change was checked, so no
+  new public tunnel was started.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest tests/test_ngrok_publish.py -q`: 3 passed.
+- Full suite after this follow-up: 30 passed.
+
+### Compose frontend, ngrok and database services
+
+- Added a dedicated Nginx frontend image and Compose service. Nginx serves the
+  React bundle, routes `/api/` to FastAPI and preserves SPA navigation. Only
+  the frontend binds `127.0.0.1:8000`; backend is private to Compose.
+- Added a one-shot `database` service using the backend image to initialize the
+  SQLite schema on the existing persistent volume before the backend starts.
+  SQLite remains embedded; no database server or multi-writer storage was added.
+- Added `ngrok` under Compose profile `publish`, forwarding to `frontend:80`.
+  The ngrok token/optional URL come from ignored `.env` only for this service;
+  Basic Auth comes from a Compose secret. The prior host script remains an
+  optional manual fallback.
+- Updated ADR 0007, README, environment template and deployment guide. The
+  ngrok token and URL remained unset, so the new public service was not started.
+
+#### Verification
+
+- `docker compose config --quiet` and
+  `docker compose --profile publish config --quiet`: passed.
+- `docker compose build app frontend`: passed; both images built for arm64.
+- `docker compose up -d --wait`: passed. `database` exited 0; `app` and
+  `frontend` healthy.
+- Local HTTP: `/api/health` 200, `/` 200 HTML, `/images/example` 200 HTML,
+  unauthenticated `/api/images` 401.
+- SQLite `PRAGMA integrity_check`: `ok`; image directory persisted after
+  Compose recreation.
+- Temporary container on Compose network requested `frontend:80/api/health`:
+  HTTP 200.
+- Ngrok image has `/bin/sh` and `/bin/ngrok`; Basic Auth secret mounted;
+  publish-profile shell command passed `sh -n`. No public tunnel check yet.

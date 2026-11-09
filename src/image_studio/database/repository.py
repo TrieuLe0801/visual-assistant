@@ -4,88 +4,29 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from collections.abc import Iterator
-from contextlib import contextmanager
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
 
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
-
-
-@dataclass(frozen=True)
-class User:
-    id: str
-    email: str
-    password_hash: str
-    created_at: str
-
-
-@dataclass(frozen=True)
-class ImageRecord:
-    id: str
-    owner_id: str
-    prompt: str
-    operation: str
-    status: str
-    parent_id: str | None
-    created_at: str
-    provider: str
-    model: str
-    file_path: str | None
-    mime_type: str | None
-    size_bytes: int | None
-    error: str | None
+from ..utils.time import utc_now
+from .connection import SQLiteConnectionFactory
+from .models import ImageRecord, User
+from .schema import SCHEMA_SQL
+from .settings import DatabaseSettings
 
 
 class Database:
-    def __init__(self, path: Path) -> None:
-        self.path = path
+    def __init__(self, settings: DatabaseSettings) -> None:
+        self.connections = SQLiteConnectionFactory(settings)
 
     def initialize(self) -> None:
-        if str(self.path) != ":memory:":
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
-            connection.executescript("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    email TEXT NOT NULL UNIQUE,
-                    password_hash TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS images (
-                    id TEXT PRIMARY KEY,
-                    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    prompt TEXT NOT NULL,
-                    operation TEXT NOT NULL CHECK (
-                        operation IN ('generate', 'edit', 'variation')
-                    ),
-                    status TEXT NOT NULL CHECK (
-                        status IN ('processing', 'succeeded', 'failed')
-                    ),
-                    parent_id TEXT REFERENCES images(id),
-                    created_at TEXT NOT NULL,
-                    provider TEXT NOT NULL,
-                    model TEXT NOT NULL,
-                    file_path TEXT,
-                    mime_type TEXT,
-                    size_bytes INTEGER,
-                    error TEXT
-                );
-                CREATE INDEX IF NOT EXISTS images_owner_created
-                    ON images(owner_id, created_at DESC);
-                CREATE INDEX IF NOT EXISTS images_parent
-                    ON images(parent_id);
-                """)
+        self.connections.initialize_directory()
+        with self.connections.connect() as connection:
+            connection.executescript(SCHEMA_SQL)
             connection.execute("""UPDATE images SET status = 'failed',
                    error = 'Operation interrupted before completion.'
                    WHERE status = 'processing'""")
 
     def create_user(self, email: str, password_hash: str) -> User:
         user = User(uuid.uuid4().hex, email, password_hash, utc_now())
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             connection.execute(
                 "INSERT INTO users (id, email, password_hash, created_at) "
                 "VALUES (?, ?, ?, ?)",
@@ -94,7 +35,7 @@ class Database:
         return user
 
     def get_user_by_email(self, email: str) -> User | None:
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             row = connection.execute(
                 "SELECT id, email, password_hash, created_at "
                 "FROM users WHERE email = ?",
@@ -103,7 +44,7 @@ class Database:
         return _user_from_row(row)
 
     def get_user_by_id(self, user_id: str) -> User | None:
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             row = connection.execute(
                 "SELECT id, email, password_hash, created_at FROM users WHERE id = ?",
                 (user_id,),
@@ -135,7 +76,7 @@ class Database:
             size_bytes=None,
             error=None,
         )
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             connection.execute(
                 """INSERT INTO images
                 (id, owner_id, prompt, operation, status, parent_id, created_at,
@@ -163,7 +104,7 @@ class Database:
         mime_type: str,
         size_bytes: int,
     ) -> None:
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             connection.execute(
                 """UPDATE images SET status = 'succeeded', file_path = ?,
                    mime_type = ?, size_bytes = ?, error = NULL WHERE id = ?""",
@@ -171,14 +112,14 @@ class Database:
             )
 
     def mark_image_failed(self, image_id: str, error: str) -> None:
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             connection.execute(
                 "UPDATE images SET status = 'failed', error = ? WHERE id = ?",
                 (error[:500], image_id),
             )
 
     def list_images(self, owner_id: str) -> list[ImageRecord]:
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             rows = connection.execute(
                 """SELECT * FROM images WHERE owner_id = ?
                    ORDER BY created_at DESC, id DESC""",
@@ -187,7 +128,7 @@ class Database:
         return [_image_from_row(row) for row in rows]
 
     def get_image(self, owner_id: str, image_id: str) -> ImageRecord | None:
-        with self._connect() as connection:
+        with self.connections.connect() as connection:
             row = connection.execute(
                 "SELECT * FROM images WHERE owner_id = ? AND id = ?",
                 (owner_id, image_id),
@@ -196,20 +137,6 @@ class Database:
 
     def close(self) -> None:
         return None
-
-    @contextmanager
-    def _connect(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(str(self.path), timeout=15)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        try:
-            yield connection
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
-        finally:
-            connection.close()
 
 
 def _user_from_row(row: sqlite3.Row | None) -> User | None:
