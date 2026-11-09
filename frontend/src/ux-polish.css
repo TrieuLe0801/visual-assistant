@@ -1,0 +1,404 @@
+/* Readability and interaction refinements for the existing studio theme. */
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  --muted: #56665b;
+}
+
+button,
+a,
+input,
+textarea {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+.auth-form input:focus-visible,
+.prompt-card textarea:focus-visible,
+.action-form textarea:focus-visible {
+  outline: 3px solid #39745e;
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.mobile-brand,
+.mobile-sign-out-label {
+  display: none;
+}
+
+.nav-item {
+  font-size: 14px;
+}
+
+.privacy-card strong,
+.account-email,
+.topbar-right,
+.breadcrumb,
+.library-meta,
+.detail-facts strong,
+.auth-tabs button {
+  font-size: 13px;
+  color: #4b5d51;
+}
+
+.privacy-card p,
+.nav-count,
+.detail-facts span,
+.origin-note,
+.related-section > p,
+.prompt-tip p,
+.auth-footnote {
+  font-size: 12px;
+  color: #56665b;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.eyebrow,
+.detail-label,
+.prompt-card-head,
+.related-item strong {
+  font-size: 11px;
+  color: #56665b;
+}
+
+.image-card-copy > div,
+.loading-state,
+.image-placeholder,
+.back-link,
+.prompt-card-foot > span,
+.prompt-count,
+.action-form label span {
+  color: #56665b;
+}
+
+.prompt-card textarea::placeholder,
+.action-form textarea::placeholder,
+.auth-form input::placeholder {
+  color: #68766c;
+}
+
+.status-succeeded {
+  color: #2e6246;
+}
+
+.status-processing {
+  color: #725514;
+}
+
+.status-failed {
+  color: #973f36;
+}
+
+.subheading,
+.image-card-copy > p,
+.detail-prompt,
+.create-intro > p:not(.eyebrow),
+.auth-copy > p:not(.eyebrow),
+.empty-state > p:not(.eyebrow) {
+  font-size: 15px;
+  color: #4b5d51;
+}
+
+.button {
+  min-height: 44px;
+  height: auto;
+  padding: 10px 17px;
+  font-size: 14px;
+}
+
+.back-link,
+.download-link,
+.action-form label,
+.auth-form label {
+  min-height: 34px;
+  font-size: 14px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.download-link {
+  align-items: center;
+  padding: 4px 0;
+}
+
+.image-card-copy > div,
+.status-badge,
+.related-item small,
+.alert,
+.progress-note,
+.prompt-card-foot > span,
+.prompt-count {
+  font-size: 12px;
+}
+
+.status-badge {
+  gap: 7px;
+  font-weight: 600;
+}
+
+.status-badge i {
+  width: 7px;
+  height: 7px;
+}
+
+.image-card-copy > div {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prompt-card textarea,
+.action-form textarea,
+.auth-form input {
+  font-size: 16px;
+}
+
+.prompt-card textarea {
+  line-height: 1.6;
+}
+
+.action-form textarea {
+  min-height: 92px;
+}
+
+.action-form label span {
+  font-size: 12px;
+}
+
+.action-form .button {
+  min-height: 44px;
+  height: auto;
+  font-size: 13px;
+}
+
+.related-item {
+  min-height: 64px;
+}
+
+.related-item strong {
+  letter-spacing: 0;
+}
+
+.auth-form input {
+  min-height: 48px;
+}
+
+.auth-panel .button {
+  min-height: 48px;
+  height: auto;
+}
+
+.auth-footnote {
+  color: #56665b;
+}
+
+.global-alert button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.library-error {
+  margin: 28px auto;
+  padding: 32px;
+  max-width: 520px;
+  border: 1px solid #dfe5df;
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+}
+
+.library-error h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.library-error p {
+  margin: 0 0 20px;
+  color: #56665b;
+}
+
+.library-retry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid #ebd6d0;
+  border-radius: 9px;
+  background: #fff7f5;
+  color: #8b3e37;
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    height: calc(72px + env(safe-area-inset-bottom));
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+    justify-content: space-around;
+    gap: 8px;
+    background: #fbfbf8;
+    border-top: 1px solid var(--line);
+    border-bottom: 0;
+    box-shadow: 0 -6px 24px #17211e0c;
+    z-index: 5;
+  }
+
+  .sidebar > .brand,
+  .privacy-card,
+  .avatar,
+  .account-email,
+  .topbar-right,
+  .breadcrumb > span {
+    display: none;
+  }
+
+  .sidebar > .nav-item {
+    width: auto;
+    height: 56px;
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px;
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .sidebar .nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar-bottom {
+    display: block;
+    flex: 1 1 0;
+    margin: 0;
+  }
+
+  .account-row {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .icon-button {
+    width: 100%;
+    height: 56px;
+    flex-direction: column;
+    gap: 3px;
+    padding: 5px;
+    font-size: 19px;
+    line-height: 1.2;
+  }
+
+  .mobile-sign-out-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .main-area {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    height: 56px;
+    padding: 0 18px;
+  }
+
+  .mobile-brand {
+    display: block;
+  }
+
+  .breadcrumb {
+    margin-left: auto;
+    font-size: 13px;
+  }
+
+  .page-content {
+    padding-top: 32px;
+  }
+
+  .heading-row .button {
+    min-height: 44px;
+    height: auto;
+  }
+
+  .image-card-copy > p {
+    font-size: 13px;
+  }
+
+  .image-card-copy > div,
+  .status-badge {
+    font-size: 11px;
+  }
+
+  .prompt-card textarea {
+    font-size: 16px;
+  }
+
+  .auth-screen {
+    background: radial-gradient(circle at 100% 0, #e8f0e7, #fbfbf8 45%);
+  }
+}
+
+@media (max-width: 420px) {
+  .library-retry {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-form label {
+    display: block;
+  }
+
+  .action-form label span {
+    display: block;
+    margin-top: 3px;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 761px) {
+  .auth-panel {
+    padding: 24px 0;
+  }
+
+  .auth-panel .brand {
+    margin-bottom: 24px;
+  }
+
+  .auth-copy > p:not(.eyebrow) {
+    margin-bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

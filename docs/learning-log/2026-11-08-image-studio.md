@@ -337,3 +337,37 @@ coordination are not implemented. Provider calls are synchronous.
   passed.
 - Live prompt interpretation, image generation, self-hosted provider and
   browser-driven E2E: not run. The current source image was not deployed.
+
+## UX/UI review — 2026-11-09
+
+- Reviewed the existing React UI with the official `ui-ux-pro-max` skill's UX
+  searches for mobile touch targets, form feedback and React semantics. Kept
+  the established visual identity instead of applying a new style preset.
+- Increased text contrast and readable sizes, added visible keyboard focus,
+  larger controls and reduced-motion support. Mobile navigation now has visible
+  labels and an accessible logout action.
+- Replaced the misleading “Đã lưu tự động” label and static sort chevron. Added
+  a library retry state, operation-specific progress text and Vietnamese copy
+  for common API errors. Failed creation retains the prompt.
+- Guarded asynchronous library and image responses so an old account's pending
+  response cannot repopulate the UI after logout or a different login.
+
+### Verification
+
+- `npm ci` in `frontend/`: passed; 25 packages installed, 0 vulnerabilities.
+- `npm run build` in `frontend/`: passed; TypeScript and Vite build completed.
+- Safari Responsive Design Mode at 375 × 812: auth, empty library, labeled
+  bottom navigation, logout action, create form and focus ring inspected.
+- Safari at 1440 × 900: create page and sidebar inspected. Local temporary API
+  account confirmed missing-provider error appears in Vietnamese; no live model
+  call occurred. The temporary backend used a separate `/tmp` database.
+- Before integration with the latest `main`, `uv run pytest` passed 30 tests;
+  Ruff reported `N999` for the existing hyphenated secret-initializer script.
+- After rebasing onto `main` at `70b1018`, `uv run pytest` passed 29 tests.
+  The updated base removed obsolete ngrok tests and included its Ruff
+  exception. isort, Black, flake8 and Ruff checks all passed.
+- `npm run build` and `git diff --check` after the rebase: passed.
+
+Live image generation, image detail with a successful result and browser checks
+at other viewport sizes were not run. The temporary backend had no provider
+credentials.

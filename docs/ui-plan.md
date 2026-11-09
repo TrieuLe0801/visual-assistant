@@ -28,3 +28,15 @@ Status: MVP interface
 
 Kiểm tra đăng ký/đăng nhập, create, edit, variation, detail/download, owner
 isolation, lỗi provider/storage, refresh/login lại và backend restart.
+
+## UX refinement — 2026-11-09
+
+- Giữ giao diện xanh trung tính hiện có; tăng cỡ chữ nội dung, độ tương phản,
+  kích thước vùng bấm và focus ring. Tôn trọng `prefers-reduced-motion`.
+- Mobile dùng điều hướng dưới màn hình có nhãn cho thư viện, tạo ảnh và đăng
+  xuất. Chừa khoảng trống để nội dung không bị thanh điều hướng che.
+- Lỗi tải thư viện có nút thử lại. Lỗi tạo ảnh giữ prompt đã nhập và hiện thông
+  báo tiếng Việt cho các lỗi API thường gặp. Trạng thái đang xử lý phân biệt
+  chỉnh sửa với biến thể.
+- Các phản hồi thư viện hoặc tạo ảnh thuộc phiên đã đăng xuất không được đưa
+  vào giao diện của phiên tiếp theo.
