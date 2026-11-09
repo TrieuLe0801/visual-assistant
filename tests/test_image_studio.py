@@ -198,6 +198,49 @@ def test_other_user_cannot_list_read_edit_or_download_images(
         ).status_code
         == 404
     )
+    assert client.delete(f"/api/images/{image['id']}").status_code == 404
+
+
+def test_delete_removes_file_and_hides_record_but_preserves_child_lineage(
+    client: TestClient,
+) -> None:
+    register(client, "delete@example.com")
+    original = client.post("/api/images/generate", json={"prompt": "A tree"}).json()
+    child = client.post(
+        f"/api/images/{original['id']}/edit", json={"prompt": "Add stars"}
+    ).json()
+    file_path = client.app.state.storage.resolve(
+        client.app.state.database.get_image(
+            client.get("/api/auth/me").json()["id"], original["id"]
+        ).file_path
+    )
+    assert file_path.exists()
+
+    assert client.delete(f"/api/images/{original['id']}").status_code == 204
+    assert not file_path.exists()
+    assert client.delete(f"/api/images/{original['id']}").status_code == 404
+    assert client.get(f"/api/images/{original['id']}").status_code == 404
+    assert client.get(original["file_url"]).status_code == 404
+    records = client.get("/api/images").json()
+    assert [record["id"] for record in records] == [child["id"]]
+    assert records[0]["parent_id"] == original["id"]
+    assert client.get(child["file_url"]).status_code == 200
+
+
+def test_delete_storage_failure_keeps_record_visible(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    register(client, "delete-failure@example.com")
+    image = client.post("/api/images/generate", json={"prompt": "A lake"}).json()
+
+    def fail_delete(_relative_path: str) -> None:
+        raise ImageStorageError("Image storage is unavailable.")
+
+    monkeypatch.setattr(client.app.state.storage, "delete", fail_delete)
+    response = client.delete(f"/api/images/{image['id']}")
+    assert response.status_code == 500
+    assert client.get(f"/api/images/{image['id']}").status_code == 200
+    assert client.get(image["file_url"]).status_code == 200
 
 
 def test_provider_error_is_recorded_as_failure_not_success(

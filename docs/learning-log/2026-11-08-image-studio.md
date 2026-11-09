@@ -371,3 +371,107 @@ coordination are not implemented. Provider calls are synchronous.
 Live image generation, image detail with a successful result and browser checks
 at other viewport sizes were not run. The temporary backend had no provider
 credentials.
+## Image count, deletion and Compose deployment — 2026-11-09
+
+- Added a 1–6 image selector. The frontend sends one generation request per
+  selected image, in sequence, to avoid holding one proxy request open across
+  all provider calls. It reloads the library and reports partial success. Each
+  completed image or failed operation remains in its own library record.
+- Added owner-scoped `DELETE /api/images/{id}`. Deletion removes the image file
+  and hides its record; a SQLite metadata tombstone retains child image links.
+  Existing databases receive nullable `deleted_at` during startup. Images that
+  are still processing cannot be deleted.
+- Updated the charter, AGENTS.md, deployment skill, UI plan, roadmap and ADR
+  0009 for the user-authorized count exception to the previous product rule.
+- Deployed to the existing `visual-assistant` Docker Compose project on the
+  local Docker Desktop host. Its Compose file and ignored `.env` and session
+  secret are under `/Users/trieule/Work/visual-assistant`; the rebuilt images
+  came from this `feature-sign-in` worktree. No provider credential was printed
+  or changed.
+- Tagged the old backend/frontend images as `image-studio:rollback-20261109`
+  and `image-studio-frontend:rollback-20261109`. Stopped the tunnel and app,
+  backed up the persistent volume to the existing ignored host backup directory
+  as `image-studio-pre-count-delete-20261109.tgz`, then recreated backend and
+  frontend without rebuilding from the older deployment checkout. Restarted
+  the Quick Tunnel, which issued a new temporary URL:
+  `https://registered-gen-wheels-antibodies.trycloudflare.com`.
+
+Deployment commands (the first build ran from this worktree):
+
+```bash
+docker tag image-studio:local image-studio:rollback-20261109
+docker tag image-studio-frontend:local image-studio-frontend:rollback-20261109
+docker compose build app frontend
+docker compose -f /Users/trieule/Work/visual-assistant/compose.yaml --profile publish stop cloudflared
+docker compose -f /Users/trieule/Work/visual-assistant/compose.yaml stop app
+docker run --rm --user 0 --mount type=volume,src=visual_assistant_image_data,dst=/data,readonly --mount type=bind,src=/Users/trieule/Work/visual-assistant/backups,dst=/backups image-studio:rollback-20261109 tar -czf /backups/image-studio-pre-count-delete-20261109.tgz -C /data .
+gzip -t /Users/trieule/Work/visual-assistant/backups/image-studio-pre-count-delete-20261109.tgz
+docker compose -f /Users/trieule/Work/visual-assistant/compose.yaml up -d --no-build --no-deps --force-recreate --wait app frontend
+docker compose -f /Users/trieule/Work/visual-assistant/compose.yaml --profile publish up -d --no-build --no-deps cloudflared
+```
+
+After deployment, corrected the derived-image label for a deleted source,
+then ran `npm run build`, `docker compose build frontend` and
+`docker compose -f /Users/trieule/Work/visual-assistant/compose.yaml up -d
+--no-build --no-deps --force-recreate --wait frontend`. The final frontend
+image at that point was `sha256:4ca72c37...`; its deployed asset was
+`assets/index-Bp8N832K.js`. The frontend remained healthy, and public health
+returned HTTP 200 after recreation.
+
+### Verification
+
+- `uv run pytest tests/test_database.py tests/test_image_studio.py -q`: 20 passed.
+  This covers old-DB migration, owner-scoped deletion, file removal, child
+  lineage and a deletion storage failure. Multi-image UI behavior has no
+  browser automation test; the selector and request loop passed TypeScript
+  compilation.
+- `uv run pytest`: 32 passed, including 2 development-hook tests.
+- `uv run isort --check-only . .codex/hooks/format_python.py`,
+  `uv run black --check . .codex/hooks/format_python.py`,
+  `uv run flake8 . .codex/hooks/format_python.py`,
+  `uv run ruff check . .codex/hooks/format_python.py` and
+  `git diff --check`: passed.
+- `npm ci`: passed; 25 packages installed and no vulnerabilities reported.
+  `npm run build`: passed with TypeScript and Vite 8.3.6.
+- `docker compose config --quiet` and
+  `docker compose --profile publish config --quiet`: passed.
+  `docker compose build app frontend`: passed. New backend image
+  `sha256:0a683f5f...` and frontend image `sha256:4ca72c37...` were healthy
+  after recreation.
+- Stopped-app backup command used `docker run --rm --user 0` with the named
+  volume mounted read-only and the host backup directory mounted writable.
+  `gzip -t` passed. In the updated container, SQLite `PRAGMA integrity_check`
+  returned `ok` and `deleted_at` was present.
+- Local `GET /api/health` and `GET /` returned HTTP 200;
+  unauthenticated `DELETE /api/images/nonexistent` returned HTTP 401. OpenAPI
+  inside the backend lists the DELETE and generate routes. The deployed JS
+  asset contains the count selector and delete labels. Public Quick Tunnel
+  `GET /api/health` returned HTTP 200.
+
+### Limits and recovery
+
+- Live image generation, browser-driven UI behavior, self-hosted provider and
+  LangSmith delivery were not checked. No model call was made for deployment
+  verification. Each selected image can incur a provider and prompt-model call.
+  Reloading the page during a multi-image action stops later requests; any
+  finished operations remain stored.
+- Quick Tunnel URL is temporary and has no Cloudflare Access policy. Existing
+  backup/restore instructions in `docs/deployment-compose-cloudflare.md` apply.
+  For code rollback, retag the two `rollback-20261109` images as `:local` and
+  recreate app/frontend with the existing Compose file. A data rollback uses
+  the paired archive and a new volume; do not restore over the live volume.
+
+### PR integration follow-up
+
+- Rebasing the feature branch onto `origin/main` brought in the merged UX/UI
+  changes. Resolved the generation conflict by retaining session-version
+  guards during each of the 1–6 requests, plus the upstream library retry and
+  Vietnamese API error handling. The delete action now has the same
+  session-version guard. The image count and delete controls meet the newer
+  mobile touch-target sizing.
+- `uv run pytest`: 32 passed. `npm run build`: passed with 17 transformed
+  modules. `git diff --check`: passed.
+- Rebuilt and recreated only the frontend again. Final deployed frontend image
+  is `sha256:88be60e7...`; asset `assets/index-CaFaOPXc.js` is served locally.
+  Frontend is healthy and the Quick Tunnel `/api/health` returned HTTP 200.
+  Live model calls and browser interaction remain unverified.

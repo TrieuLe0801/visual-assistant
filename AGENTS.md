@@ -43,8 +43,8 @@ Before editing code or project decisions, read these files in order:
 - User A must never read or change user B's image or prompt.
 - Never put API keys, session secrets, passwords or provider credentials in the
   database, API response or logs.
-- Do not let users choose provider, model, image size, aspect ratio, count or
-  other generation parameters.
+- Let users choose 1–6 images per creation action. Do not let users choose
+  provider, model, image size, aspect ratio or other generation parameters.
 - Preserve the workflow outcomes defined in `docs/project-charter.md`.
 
 ### Working agreements

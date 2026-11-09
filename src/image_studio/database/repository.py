@@ -20,6 +20,11 @@ class Database:
         self.connections.initialize_directory()
         with self.connections.connect() as connection:
             connection.executescript(SCHEMA_SQL)
+            columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(images)")
+            }
+            if "deleted_at" not in columns:
+                connection.execute("ALTER TABLE images ADD COLUMN deleted_at TEXT")
             connection.execute("""UPDATE images SET status = 'failed',
                    error = 'Operation interrupted before completion.'
                    WHERE status = 'processing'""")
@@ -121,7 +126,7 @@ class Database:
     def list_images(self, owner_id: str) -> list[ImageRecord]:
         with self.connections.connect() as connection:
             rows = connection.execute(
-                """SELECT * FROM images WHERE owner_id = ?
+                """SELECT * FROM images WHERE owner_id = ? AND deleted_at IS NULL
                    ORDER BY created_at DESC, id DESC""",
                 (owner_id,),
             ).fetchall()
@@ -130,10 +135,20 @@ class Database:
     def get_image(self, owner_id: str, image_id: str) -> ImageRecord | None:
         with self.connections.connect() as connection:
             row = connection.execute(
-                "SELECT * FROM images WHERE owner_id = ? AND id = ?",
+                "SELECT * FROM images WHERE owner_id = ? AND id = ? "
+                "AND deleted_at IS NULL",
                 (owner_id, image_id),
             ).fetchone()
         return _image_from_row(row)
+
+    def delete_image(self, owner_id: str, image_id: str) -> bool:
+        with self.connections.connect() as connection:
+            result = connection.execute(
+                "UPDATE images SET deleted_at = ?, file_path = NULL "
+                "WHERE owner_id = ? AND id = ? AND deleted_at IS NULL",
+                (utc_now(), owner_id, image_id),
+            )
+        return result.rowcount == 1
 
     def close(self) -> None:
         return None

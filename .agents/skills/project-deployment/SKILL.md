@@ -20,8 +20,9 @@ or deployment convention.
   one application host; multi-host deployment needs a separate storage decision.
 - Establish SQLite and image-volume backup and restore steps before production
   data is stored.
-- Preserve owner-scoped image and file access, provider configuration on the
-  server, and the UI restriction against provider/model/image parameter choice.
+- Preserve owner-scoped image and file access and provider configuration on the
+  server. The UI may select 1–6 images per creation action but no other
+  provider, model or image parameters.
 - Live provider checks need valid credentials and an active endpoint. Record
   those checks separately from offline tests and build results.
 

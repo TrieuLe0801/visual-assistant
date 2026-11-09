@@ -3,6 +3,7 @@
 Date: 2026-11-08
 Status: Accepted
 Supersedes: ADR 0004 for product scope and runtime behavior
+Amended by: ADR 0009 for image count and deletion
 
 ## Context
 
@@ -21,8 +22,8 @@ history in a personal library.
   variation. Provide an OpenAI API adapter and an OpenAI-compatible self-hosted
   adapter.
 - Let the administrator configure default provider, model, base URL and
-  credentials through backend environment variables. Do not expose provider,
-  model or image parameter selection to end users.
+  credentials through backend environment variables. Do not expose provider or
+  model selection. ADR 0009 permits only image count selection from 1 to 6.
 - Return clear unsupported-operation errors. Never report provider or storage
   failures as successful image creation.
 - Keep credentials out of the database, API responses and logs.

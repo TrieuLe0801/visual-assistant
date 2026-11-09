@@ -6,7 +6,8 @@ Webapp tạo ảnh từ prompt, chỉnh ảnh đã lưu và tạo biến thể. 
 ## MVP
 
 - Đăng ký/đăng nhập bằng email và mật khẩu.
-- Tạo ảnh mới, chỉnh sửa ảnh, tạo biến thể và mở lịch sử ảnh dẫn xuất.
+- Tạo 1–6 ảnh từ một prompt, chỉnh sửa ảnh, tạo biến thể, xóa ảnh và mở lịch
+  sử ảnh dẫn xuất.
 - SQLite lưu tài khoản và metadata; local volume lưu tệp ảnh.
 - FastAPI backend và React + TypeScript frontend.
 - OpenAI API hoặc endpoint OpenAI-compatible tự host, cấu hình ở server.

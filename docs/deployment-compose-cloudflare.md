@@ -124,6 +124,12 @@ volume until the restore is verified.
   rollback. SQLite schema changes may need a matching data restore.
 - Live OpenAI, self-hosted and LangSmith delivery checks require credentials
   and active endpoints; a healthy container does not prove those calls work.
+- A user can request 1–6 images per creation action. The browser sends separate
+  requests, each with its own provider and prompt-model cost. Reloading the
+  page stops later requests but leaves completed results in the library.
+- Deleting an image removes its live file and hides it from the image API.
+  SQLite retains a metadata tombstone for derived-image lineage. Older backup
+  archives may still contain files deleted after the backup was made.
 
 ## References
 

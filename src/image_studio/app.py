@@ -221,6 +221,26 @@ def create_app(
             parent_id=None,
         )
 
+    @app.delete("/api/images/{image_id}", status_code=204)
+    def delete_image(
+        image_id: str, user: Annotated[User, Depends(require_user)]
+    ) -> Response:
+        record = _owned_image(database, user.id, image_id)
+        if record.status == "processing":
+            raise HTTPException(
+                status_code=409, detail="An image being created cannot be deleted."
+            )
+        if record.file_path:
+            try:
+                storage.delete(record.file_path)
+            except ImageStorageError as exc:
+                raise HTTPException(
+                    status_code=500, detail="Image storage is unavailable."
+                ) from exc
+        if not database.delete_image(user.id, image_id):
+            raise HTTPException(status_code=404, detail="Image was not found.")
+        return Response(status_code=204)
+
     @app.post(
         "/api/images/{image_id}/edit", response_model=ImageOutput, status_code=201
     )

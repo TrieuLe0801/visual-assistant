@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS images (
     file_path TEXT,
     mime_type TEXT,
     size_bytes INTEGER,
-    error TEXT
+    error TEXT,
+    deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS images_owner_created
     ON images(owner_id, created_at DESC);

@@ -32,6 +32,8 @@ const errorMessages: Record<string, string> = {
   "Configured image provider does not support variations.": "Hệ thống hiện không hỗ trợ tạo biến thể.",
   "Source image is unavailable.": "Ảnh nguồn hiện không khả dụng.",
   "Image storage is unavailable.": "Không lưu được ảnh. Vui lòng thử lại sau.",
+  "Image was not found.": "Ảnh không còn trong thư viện.",
+  "An image being created cannot be deleted.": "Ảnh đang được tạo. Hãy thử xóa sau.",
 };
 
 function displayError(message: string): string {
@@ -84,6 +86,8 @@ function App() {
   const [error, setError] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [prompt, setPrompt] = useState("");
+  const [imageCount, setImageCount] = useState(1);
+  const [completedCount, setCompletedCount] = useState(0);
   const [editPrompt, setEditPrompt] = useState("");
   const [variationPrompt, setVariationPrompt] = useState("");
   const sessionVersion = useRef(0);
@@ -182,25 +186,64 @@ function App() {
     const value = prompt.trim();
     if (!value) return;
     setError("");
+    setCompletedCount(0);
     setWorking(true);
     const session = sessionVersion.current;
     try {
-      const created = await request<ImageRecord>("/api/images/generate", {
-        method: "POST",
-        body: JSON.stringify({ prompt: value }),
-      });
-      if (sessionVersion.current !== session) return;
-      setImages((current) => [created, ...current.filter((image) => String(image.id) !== String(created.id))]);
+      const created: ImageRecord[] = [];
+      let firstError = "";
+      for (let index = 0; index < imageCount; index += 1) {
+        try {
+          const image = await request<ImageRecord>("/api/images/generate", {
+            method: "POST",
+            body: JSON.stringify({ prompt: value }),
+          });
+          if (sessionVersion.current !== session) return;
+          created.push(image);
+          setImages((current) => [image, ...current.filter((item) => String(item.id) !== String(image.id))]);
+        } catch (cause) {
+          if (sessionVersion.current !== session) return;
+          if (!firstError) firstError = cause instanceof Error ? cause.message : "Tạo ảnh thất bại.";
+        }
+        setCompletedCount(index + 1);
+      }
       await loadImages();
       if (sessionVersion.current !== session) return;
-      setSelectedId(created.id);
-      setPrompt("");
-      setView("detail");
+      if (created.length > 0) {
+        setSelectedId(created[0].id);
+        setPrompt("");
+        setView(imageCount === 1 ? "detail" : "library");
+      }
+      if (created.length !== imageCount) {
+        setError(`${created.length}/${imageCount} ảnh đã tạo. ${firstError}`);
+        setView("library");
+      }
     } catch (cause) {
       if (sessionVersion.current !== session) return;
       await loadImages();
       if (sessionVersion.current !== session) return;
       setError(cause instanceof Error ? cause.message : "Tạo ảnh thất bại.");
+    } finally {
+      if (sessionVersion.current === session) setWorking(false);
+    }
+  }
+
+  async function deleteImage(image: ImageRecord) {
+    if (!window.confirm("Xóa ảnh này khỏi thư viện? Thao tác không thể hoàn tác.")) return;
+    setError("");
+    setWorking(true);
+    const session = sessionVersion.current;
+    try {
+      await request<void>(`/api/images/${encodeURIComponent(String(image.id))}`, { method: "DELETE" });
+      if (sessionVersion.current !== session) return;
+      setImages((current) => current.filter((item) => String(item.id) !== String(image.id)));
+      if (String(selectedId) === String(image.id)) {
+        setSelectedId(null);
+        setView("library");
+      }
+    } catch (cause) {
+      if (sessionVersion.current !== session) return;
+      setError(cause instanceof Error ? cause.message : "Không xóa được ảnh.");
     } finally {
       if (sessionVersion.current === session) setWorking(false);
     }
@@ -327,7 +370,7 @@ function App() {
               <div className="library-error" role="alert"><h2>Chưa tải được thư viện</h2><p>{libraryError}</p><button className="button secondary" onClick={() => void loadImages()}>Thử tải lại</button></div>
             ) : images.length ? (
               <div className="image-grid">
-                {images.map((image, index) => <ImageCard key={image.id} image={image} index={index} onOpen={() => openDetail(image)} />)}
+                {images.map((image, index) => <ImageCard key={image.id} image={image} index={index} onOpen={() => openDetail(image)} onDelete={() => void deleteImage(image)} disabled={working} />)}
               </div>
             ) : <EmptyLibrary onCreate={() => setView("create")} />}
             {libraryError && images.length > 0 && <div className="library-retry" role="alert"><span>Chưa cập nhật được thư viện: {libraryError}</span><button className="button secondary" onClick={() => void loadImages()}>Thử lại</button></div>}
@@ -343,8 +386,13 @@ function App() {
                 <div className="prompt-card-head"><span className="card-step">01</span><span>HÌNH ẢNH MỚI</span><span className="prompt-count">{prompt.length} / 4.000</span></div>
                 <label className="visually-hidden" htmlFor="new-prompt">Mô tả hình ảnh</label>
                 <textarea id="new-prompt" autoFocus maxLength={4000} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ví dụ: Một căn nhà nhỏ bên bờ biển lúc hoàng hôn, phong cách tranh màu nước…" required />
+                <label className="image-count-label" htmlFor="image-count">Số ảnh cần tạo
+                  <select id="image-count" value={imageCount} onChange={(event) => setImageCount(Number(event.target.value))} disabled={working}>
+                    {[1, 2, 3, 4, 5, 6].map((count) => <option key={count} value={count}>{count} ảnh</option>)}
+                  </select>
+                </label>
                 <div className="prompt-card-foot"><span>✧ Mô tả gốc được lưu cùng hình ảnh.</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
-                {working && <div className="progress-note" role="status">Đang xử lý mô tả và tạo hình ảnh. Có thể mất một chút thời gian.</div>}
+                {working && <div className="progress-note" role="status">Đã xử lý {completedCount}/{imageCount} ảnh. Mỗi ảnh được lưu riêng; có thể mất vài phút.</div>}
               </form>
             </div>
           </section>
@@ -363,7 +411,8 @@ function App() {
                 <div className="detail-block"><span className="detail-label">PROMPT</span><p className="detail-prompt">{selected.prompt}</p></div>
                 <div className="detail-facts"><div><span>Ngày tạo</span><strong>{formatDate(selected.created_at)}</strong></div><div><span>Định dạng</span><strong>{selected.mime_type?.replace("image/", "").toUpperCase() ?? "—"}</strong></div></div>
                 {selected.error && <p className="alert error" role="alert">{displayError(selected.error)}</p>}
-                {selected.parent_id && <div className="origin-note">↳ Ảnh này được tạo từ một ảnh trong thư viện.</div>}
+                {selected.parent_id && <div className="origin-note">↳ Ảnh này được tạo từ một ảnh nguồn.</div>}
+                <button className="button danger" type="button" disabled={working} onClick={() => void deleteImage(selected)}>Xóa ảnh</button>
                 {selected.status === "succeeded" && <div className="actions-block">
                   <form className="action-form" onSubmit={(event) => void createDerived(event, "edit")}>
                     <label htmlFor="edit-prompt">Chỉnh sửa bằng prompt</label>
@@ -392,15 +441,18 @@ function Brand() {
   return <div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>atelier<span className="brand-dot">.</span></span></div>;
 }
 
-function ImageCard({ image, index, onOpen }: { image: ImageRecord; index: number; onOpen: () => void }) {
+function ImageCard({ image, index, onOpen, onDelete, disabled }: { image: ImageRecord; index: number; onOpen: () => void; onDelete: () => void; disabled: boolean }) {
   return (
-    <button className="image-card" onClick={onOpen} aria-label={`Mở hình ảnh: ${image.prompt}`}>
-      <div className={`image-thumb thumb-tone-${index % 5}`}>
-        {image.status === "succeeded" ? <img loading="lazy" src={imageFile(image.id)} alt="" /> : <div className="image-placeholder"><span>{image.status === "processing" ? "Đang xử lý" : "Tạo ảnh thất bại"}</span></div>}
-        <span className="card-open" aria-hidden="true">↗</span>
-      </div>
-      <div className="image-card-copy"><p>{image.prompt}</p><div><span>{formatDate(image.created_at)}</span><StatusBadge status={image.status} /></div></div>
-    </button>
+    <div className="image-card">
+      <button className="image-card-open" onClick={onOpen} aria-label={`Mở hình ảnh: ${image.prompt}`}>
+        <div className={`image-thumb thumb-tone-${index % 5}`}>
+          {image.status === "succeeded" ? <img loading="lazy" src={imageFile(image.id)} alt="" /> : <div className="image-placeholder"><span>{image.status === "processing" ? "Đang xử lý" : "Tạo ảnh thất bại"}</span></div>}
+          <span className="card-open" aria-hidden="true">↗</span>
+        </div>
+        <div className="image-card-copy"><p>{image.prompt}</p><div><span>{formatDate(image.created_at)}</span><StatusBadge status={image.status} /></div></div>
+      </button>
+      <button className="card-delete" type="button" disabled={disabled} onClick={onDelete} aria-label={`Xóa hình ảnh: ${image.prompt}`}>Xóa</button>
+    </div>
   );
 }
 

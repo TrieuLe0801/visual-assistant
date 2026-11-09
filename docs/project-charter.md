@@ -23,6 +23,8 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
 
 - Đăng ký, đăng nhập và đăng xuất bằng email và mật khẩu.
 - Tạo ảnh mới từ prompt văn bản.
+- Người dùng chọn tạo 1–6 ảnh từ cùng một prompt. Mỗi ảnh có trạng thái và mục
+  thư viện riêng; lỗi từng ảnh không làm mất các ảnh đã tạo thành công.
 - Nhận prompt tiếng Việt; model ngôn ngữ được cấu hình ở server hiểu và diễn
   đạt yêu cầu cho model ảnh. Lưu prompt gốc do người dùng nhập.
 - Chỉnh sửa ảnh đã lưu bằng prompt.
@@ -32,9 +34,11 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
 - Lưu ảnh trên local volume; lưu tài khoản, prompt, metadata, trạng thái thao
   tác và quan hệ ảnh trong SQLite.
 - Giới hạn mọi truy vấn ảnh và tệp theo chủ sở hữu.
+- Người dùng xóa từng ảnh trong thư viện. File bị xóa, mục không còn truy cập
+  được; quan hệ ảnh dẫn xuất được giữ trong lịch sử nội bộ.
 - Cấu hình provider mặc định ở phía máy chủ qua biến môi trường. Giao diện
-  người dùng không cho chọn provider, model, kích thước, tỉ lệ, số lượng hoặc
-  tham số ảnh.
+  người dùng chỉ chọn số lượng 1–6; không chọn provider, model, kích thước,
+  tỉ lệ hoặc tham số ảnh khác.
 - Hỗ trợ OpenAI API và endpoint model tự host tương thích với hợp đồng API ảnh
   đã chọn. Provider thiếu thao tác phải trả lỗi rõ ràng.
 
@@ -50,7 +54,8 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
 - API key, session secret và thông tin xác thực không lưu trong DB hoặc log.
 - Không tải ảnh từ URL tùy ý do provider trả về; adapter nhận nội dung ảnh theo
   hợp đồng đã chọn và lưu vào local volume.
-- Người dùng không tự thay đổi provider, model hoặc thông số sinh ảnh.
+- Người dùng chỉ chọn số lượng 1–6, không tự thay đổi provider, model hoặc
+  thông số sinh ảnh khác.
 
 ## Phạm vi MVP
 
@@ -67,8 +72,8 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
 ## Ngoài phạm vi
 
 - Chia sẻ ảnh, thanh toán, quota, moderation dashboard hoặc quản trị tài khoản.
-- Người dùng tự chọn provider/model hoặc điều khiển kích thước, tỉ lệ, số lượng
-  ảnh và thông số nâng cao.
+- Người dùng tự chọn provider/model hoặc điều khiển kích thước, tỉ lệ và thông
+  số nâng cao khác.
 - Công cụ chỉnh ảnh thủ công, upload ảnh tùy ý, chat, tạo nhóm hoặc album.
 - Triển khai nhiều máy, object storage hoặc cam kết backup/khôi phục dữ liệu.
 
@@ -90,9 +95,12 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
    và tạo biến thể; thư viện vẫn hiển thị prompt gốc.
 9. Thiếu credential, provider không khả dụng, model thiếu thao tác, phản hồi
    lỗi/không hợp lệ hoặc lưu tệp thất bại không được hiển thị như thành công.
-10. Provider/model và tham số ảnh không xuất hiện như lựa chọn cho người dùng.
+10. Người dùng chọn số ảnh từ 1 đến 6 trong giao diện; mỗi API request tạo một ảnh.
+    Provider/model và tham số ảnh khác không xuất hiện như lựa chọn.
 11. Offline tests bao phủ luồng chính và lỗi bằng provider giả lập. Live provider
     checks được ghi riêng, không suy ra từ offline tests.
+12. Xóa một ảnh làm mục và file không còn truy cập được; người khác không thể
+    xóa ảnh không thuộc tài khoản của mình. Ảnh dẫn xuất đã lưu vẫn truy cập được.
 
 ## Giới hạn vận hành
 

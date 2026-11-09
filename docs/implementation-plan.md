@@ -42,6 +42,7 @@ GET  /api/images
 GET  /api/images/{id}
 GET  /api/images/{id}/file
 POST /api/images/generate
+DELETE /api/images/{id}
 POST /api/images/{id}/edit
 POST /api/images/{id}/variations
 ```
