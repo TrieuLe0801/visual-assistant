@@ -22,6 +22,14 @@ class ImageModelProfile:
 
 
 @dataclass(frozen=True)
+class PromptModelSettings:
+    model_name: str = "gpt-6-luna"
+    api_base_url: str = "https://api.openai.com/v1"
+    api_key: str | None = field(default=None, repr=False)
+    timeout_seconds: float = 30.0
+
+
+@dataclass(frozen=True)
 class Settings:
     database: DatabaseSettings
     image_storage_path: Path
@@ -34,6 +42,7 @@ class Settings:
     session_ttl_seconds: int
     provider_timeout_seconds: float
     frontend_dist_path: Path
+    prompt_model: PromptModelSettings = field(default_factory=PromptModelSettings)
     model_catalog: tuple[ImageModelProfile, ...] = ()
     active_model: str = "default"
 
@@ -52,6 +61,13 @@ class Settings:
             if provider_name == "openai"
             else os.getenv("IMAGE_API_BASE_URL", "")
         )
+        openai_base_url = os.getenv(
+            "OPENAI_BASE_URL", "https://api.openai.com/v1"
+        ).rstrip("/")
+        prompt_base_url = os.getenv("PROMPT_API_BASE_URL", openai_base_url).rstrip("/")
+        prompt_api_key = os.getenv("PROMPT_API_KEY")
+        if not prompt_api_key and prompt_base_url == openai_base_url:
+            prompt_api_key = os.getenv("OPENAI_API_KEY")
         model_catalog = _model_catalog_from_env(os.getenv("IMAGE_MODEL_CATALOG", ""))
         return cls(
             database=DatabaseSettings.from_env(),
@@ -68,6 +84,12 @@ class Settings:
                 os.getenv("IMAGE_PROVIDER_TIMEOUT_SECONDS", "180")
             ),
             frontend_dist_path=Path(os.getenv("FRONTEND_DIST_PATH", "frontend/dist")),
+            prompt_model=PromptModelSettings(
+                model_name=os.getenv("PROMPT_MODEL", "gpt-6-luna").strip(),
+                api_base_url=prompt_base_url,
+                api_key=prompt_api_key,
+                timeout_seconds=float(os.getenv("PROMPT_TIMEOUT_SECONDS", "30")),
+            ),
             model_catalog=model_catalog,
             active_model=os.getenv("IMAGE_ACTIVE_MODEL", "default").strip(),
         )
@@ -82,6 +104,10 @@ class Settings:
             raise ValueError("SESSION_TTL_SECONDS must be at least 60.")
         if self.provider_timeout_seconds <= 0:
             raise ValueError("IMAGE_PROVIDER_TIMEOUT_SECONDS must be positive.")
+        if not self.prompt_model.model_name:
+            raise ValueError("PROMPT_MODEL must not be empty.")
+        if self.prompt_model.timeout_seconds <= 0:
+            raise ValueError("PROMPT_TIMEOUT_SECONDS must be positive.")
         aliases = [profile.alias for profile in self.model_catalog]
         if len(aliases) != len(set(aliases)):
             raise ValueError("IMAGE_MODEL_CATALOG aliases must be unique.")

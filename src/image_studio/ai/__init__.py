@@ -1,7 +1,8 @@
-"""AI image provider contracts, adapters, and operation service."""
+"""AI prompt processing, image provider contracts and operation service."""
 
-from .factory import build_provider
+from .factory import build_prompt_enhancer, build_provider
 from .openai_compatible import OpenAICompatibleProvider
+from .prompt_enhancer import OpenAICompatiblePromptEnhancer, PromptEnhancer
 from .provider import (
     GeneratedImage,
     ImageProvider,
@@ -16,7 +17,10 @@ __all__ = [
     "ImageProvider",
     "ImageProviderError",
     "ImageService",
+    "OpenAICompatiblePromptEnhancer",
     "OpenAICompatibleProvider",
+    "PromptEnhancer",
     "UnsupportedImageOperation",
+    "build_prompt_enhancer",
     "build_provider",
 ]

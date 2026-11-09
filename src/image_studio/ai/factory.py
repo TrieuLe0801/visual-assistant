@@ -3,6 +3,7 @@
 from ..config import ImageModelProfile, Settings
 from .model_router import LangChainImageProvider
 from .openai_compatible import OpenAICompatibleProvider
+from .prompt_enhancer import OpenAICompatiblePromptEnhancer
 from .provider import GeneratedImage, ImageProvider, ImageProviderError
 
 
@@ -43,6 +44,17 @@ def build_provider(settings: Settings) -> LangChainImageProvider:
         profile.alias: _build_profile(profile, settings) for profile in profiles
     }
     return LangChainImageProvider(providers, settings.active_model)
+
+
+def build_prompt_enhancer(settings: Settings) -> OpenAICompatiblePromptEnhancer:
+    """Build the server-configured language model used to interpret prompts."""
+    model = settings.prompt_model
+    return OpenAICompatiblePromptEnhancer(
+        base_url=model.api_base_url,
+        api_key=model.api_key,
+        model=model.model_name,
+        timeout_seconds=model.timeout_seconds,
+    )
 
 
 def _build_profile(profile: ImageModelProfile, settings: Settings) -> ImageProvider:

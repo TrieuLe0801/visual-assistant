@@ -239,3 +239,101 @@ coordination are not implemented. Provider calls are synchronous.
   HTTP 200.
 - Ngrok image has `/bin/sh` and `/bin/ngrok`; Basic Auth secret mounted;
   publish-profile shell command passed `sh -n`. No public tunnel check yet.
+
+### Frontend host port selection — 2026-11-09
+
+- Docker showed the current frontend on host port 8000 and another project on
+  port 8503. Host port 8088 had no listener.
+- Changed the Compose frontend binding to `127.0.0.1:${FRONTEND_PORT:-8088}:80`.
+  Added `FRONTEND_PORT` to `.env.example`; it can override the default if needed.
+- Updated the local URL in the README, deployment guide and ADR 0007.
+- Recreated only the frontend with `docker compose up -d --no-deps
+  --force-recreate frontend`; its health check passed. The backend was not
+  recreated.
+- `curl -fsS http://127.0.0.1:8088/api/health`: `{"status":"ok"}`.
+
+## Vietnamese prompt interpretation — 2026-11-09
+
+- Added `ai/prompt_enhancer.py` to send Vietnamese or other-language input to a
+  server-configured OpenAI-compatible chat model, then prepare an English image
+  instruction for generation, edit and variation operations.
+- The database and UI continue to use the original user prompt. Instructions
+  preserve exact words requested for rendering. Prompt text remains excluded
+  from LangSmith traces.
+- Added `PROMPT_MODEL`, `PROMPT_API_BASE_URL`, `PROMPT_API_KEY` and
+  `PROMPT_TIMEOUT_SECONDS` configuration to local settings and Compose. The
+  prompt key falls back to `OPENAI_API_KEY` only when endpoints match;
+  self-hosted endpoints use their own optional key.
+- Updated the create UI, UI and implementation plans, README, product charter,
+  deployment guide and ADR 0008.
+- `.env` contains no OpenAI API key, so live prompt interpretation and image
+  generation remain unavailable until a key or reachable compatible endpoint
+  is configured.
+
+### Verification
+
+- No automated tests were added or run for this change.
+- isort, Black, flake8 and Ruff: passed.
+- `npm run build`: passed; TypeScript and Vite production build completed.
+- `docker compose config --quiet` and `git diff --check`: passed.
+- Live Vietnamese prompt and image-provider checks: not run; no credentials or
+  endpoint were configured.
+- No deployment or Compose restart was performed.
+
+## Replace ngrok with Cloudflare Quick Tunnel — 2026-11-09
+
+- Replaced the Compose `ngrok` publish service with `cloudflared` under the same
+  optional `publish` profile. It routes to `frontend:80`; Quick Tunnel needs no
+  token or domain. Removed the obsolete host ngrok launcher and its tests.
+- Renamed the deployment guide and amended ADR 0007. Updated README, project
+  status, roadmap and secret initialization. The old ignored `.env` ngrok keys
+  and `.secrets/ngrok-basic-auth` file were left untouched; Compose no longer
+  reads them.
+- Docker showed Visual Assistant frontend on `127.0.0.1:8088`; the other project
+  remains on `127.0.0.1:8503`. This tunnel publishes Visual Assistant only.
+- Started with `docker compose --profile publish up -d cloudflared`. Docker pulled
+  `cloudflare/cloudflared:latest` (reported version `2026.10.7`). Backend and
+  frontend were healthy; database initializer exited 0; cloudflared registered
+  a QUIC connection.
+- Cloudflare issued temporary URL
+  `https://trend-nashville-traveler-ruled.trycloudflare.com`. Its public
+  `/api/health` endpoint returned HTTP 200.
+- Compose config validation and `git diff --check` passed. Automated tests were
+  not run. At tunnel startup, the backend container had no provider credentials;
+  the later credential reload and 502 diagnosis are recorded below. Quick
+  Tunnel has no Access policy; anyone with the URL can reach registration.
+
+## Cloudflare request 502 follow-up — 2026-11-09
+
+- The user reported a failed image-generation request. Cloudflare tunnel stayed
+  connected and public `/api/health` returned HTTP 200. Backend logs recorded
+  `POST /api/images/generate` as HTTP 502, so the tunnel transport was healthy.
+- Local ignored `.env` had an OpenAI key, but the running backend container did
+  not. The latest failed operation stored a credentials error. The container
+  had not been recreated after the local key was added.
+- Recreated only the backend with
+  `docker compose up -d --no-deps --force-recreate app`. The backend became
+  healthy and now receives the key. The key value was not printed.
+- A read-only OpenAI `GET /models` returned HTTP 200, and the configured image
+  model appeared in the response. No image-generation request was retried.
+  Ask the user to retry in the browser; record that result separately.
+
+## Pre-commit verification — 2026-11-09
+
+- Added offline tests for Vietnamese prompt interpretation across generate,
+  edit and variation. Verified that the API persists original prompts and the
+  image provider receives interpreted text. A prompt-model HTTP failure leaves
+  the image provider uncalled and records a failed operation.
+- Corrected the roadmap's outdated statement that public publishing still
+  awaits a token or domain. Exempted the existing hyphenated standalone secret
+  initialization script from Ruff's module-name rule `N999`.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest tests/test_prompt_enhancer.py -q`:
+  2 passed.
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run pytest`:
+  29 passed, including 2 development-hook tests.
+- Standard isort, Black, flake8 and Ruff checks: passed.
+- `npm run build` in `frontend/`: passed; TypeScript and Vite 8.3.6.
+- `docker compose --profile publish config --quiet` and `git diff --check`:
+  passed.
+- Live prompt interpretation, image generation, self-hosted provider and
+  browser-driven E2E: not run. The current source image was not deployed.

@@ -37,6 +37,10 @@ services:
       IMAGE_API_BASE_URL: ${IMAGE_API_BASE_URL:-}
       IMAGE_API_KEY: ${IMAGE_API_KEY:-}
       IMAGE_PROVIDER_TIMEOUT_SECONDS: ${IMAGE_PROVIDER_TIMEOUT_SECONDS:-180}
+      PROMPT_MODEL: ${PROMPT_MODEL:-gpt-6-luna}
+      PROMPT_API_BASE_URL: ${PROMPT_API_BASE_URL:-https://api.openai.com/v1}
+      PROMPT_API_KEY: ${PROMPT_API_KEY:-}
+      PROMPT_TIMEOUT_SECONDS: ${PROMPT_TIMEOUT_SECONDS:-30}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-image-studio}
@@ -66,7 +70,7 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "127.0.0.1:8000:80"
+      - "127.0.0.1:${FRONTEND_PORT:-8088}:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 30s
@@ -75,37 +79,18 @@ services:
       retries: 3
     restart: unless-stopped
 
-  ngrok:
-    image: ngrok/ngrok:latest
+  cloudflared:
+    image: cloudflare/cloudflared:latest
     profiles: ["publish"]
     depends_on:
       frontend:
         condition: service_healthy
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-      NGROK_URL: ${NGROK_URL:-}
-    secrets:
-      - ngrok_basic_auth
-    entrypoint: ["/bin/sh", "-ec"]
-    command:
-      - |
-        if [ -z "$$NGROK_AUTHTOKEN" ]; then
-          echo "NGROK_AUTHTOKEN is not configured." >&2
-          exit 1
-        fi
-        basic_auth="$$(cat /run/secrets/ngrok_basic_auth)"
-        if [ -n "$$NGROK_URL" ]; then
-          exec ngrok http frontend:80 --basic-auth "$$basic_auth" --url "$$NGROK_URL" --log stdout --log-format json
-        fi
-        exec ngrok http frontend:80 --basic-auth "$$basic_auth" --log stdout --log-format json
-    restart: "on-failure:3"
+    command: ["tunnel", "--url", "http://frontend:80"]
+    restart: unless-stopped
 
 secrets:
   session_secret:
     file: ./.secrets/session_secret
-  ngrok_basic_auth:
-    file: ./.secrets/ngrok-basic-auth
-
 volumes:
   image_data:
     name: ${IMAGE_DATA_VOLUME:-visual_assistant_image_data}

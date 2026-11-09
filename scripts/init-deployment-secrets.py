@@ -1,4 +1,4 @@
-"""Create ignored local secrets for the Compose and ngrok deployment."""
+"""Create the ignored session secret required by the Compose deployment."""
 
 import os
 import secrets
@@ -21,7 +21,6 @@ def create_if_missing(name: str, value: str) -> None:
 def main() -> None:
     SECRET_DIR.mkdir(mode=0o700, exist_ok=True)
     create_if_missing("session_secret", secrets.token_urlsafe(48))
-    create_if_missing("ngrok-basic-auth", "studio:" + secrets.token_urlsafe(24))
     print("Deployment secret files are ready in .secrets/.")
 
 

@@ -10,7 +10,14 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from .ai import ImageOperationError, ImageProvider, ImageService, build_provider
+from .ai import (
+    ImageOperationError,
+    ImageProvider,
+    ImageService,
+    PromptEnhancer,
+    build_prompt_enhancer,
+    build_provider,
+)
 from .config import Settings
 from .database import Database, ImageRecord, User
 from .storage import LocalImageStorage
@@ -60,16 +67,20 @@ def create_app(
     *,
     settings: Settings | None = None,
     provider: ImageProvider | None = None,
+    prompt_enhancer: PromptEnhancer | None = None,
     database: Database | None = None,
     storage: LocalImageStorage | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.validate()
+    injected_provider = provider is not None
     session_codec = SessionCodec(settings.session_secret, settings.session_ttl_seconds)
     database = database or Database(settings.database)
     storage = storage or LocalImageStorage(settings.image_storage_path)
     provider = provider or build_provider(settings)
-    image_service = ImageService(database, storage, provider)
+    if prompt_enhancer is None and not injected_provider:
+        prompt_enhancer = build_prompt_enhancer(settings)
+    image_service = ImageService(database, storage, provider, prompt_enhancer)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -81,6 +92,9 @@ def create_app(
             close = getattr(provider, "close", None)
             if callable(close):
                 close()
+            close_prompt_model = getattr(prompt_enhancer, "close", None)
+            if callable(close_prompt_model):
+                close_prompt_model()
 
     app = FastAPI(
         title="Image Studio API",

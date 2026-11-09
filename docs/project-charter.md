@@ -1,6 +1,6 @@
 # Studio ảnh AI — Product Charter
 
-Ngày cập nhật: 2026-11-08
+Ngày cập nhật: 2026-11-09
 Trạng thái: MVP scope đã chốt
 
 ## Mục tiêu
@@ -23,6 +23,8 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
 
 - Đăng ký, đăng nhập và đăng xuất bằng email và mật khẩu.
 - Tạo ảnh mới từ prompt văn bản.
+- Nhận prompt tiếng Việt; model ngôn ngữ được cấu hình ở server hiểu và diễn
+  đạt yêu cầu cho model ảnh. Lưu prompt gốc do người dùng nhập.
 - Chỉnh sửa ảnh đã lưu bằng prompt.
 - Tạo biến thể từ ảnh đã lưu; prompt hướng dẫn biến thể là không bắt buộc.
 - Hiển thị thư viện riêng, trang chi tiết, prompt, trạng thái, quan hệ ảnh gốc
@@ -84,15 +86,18 @@ prompt, tạo biến thể và mở lại ảnh cùng lịch sử prompt trong t
 6. Người dùng A không đọc, tải, sửa hoặc tạo ảnh dựa trên ảnh của người dùng B.
 7. Prompt và ảnh vẫn mở được sau khi đăng xuất, đăng nhập lại và khởi động lại
    app.
-8. Thiếu credential, provider không khả dụng, model thiếu thao tác, phản hồi
+8. Mô tả tiếng Việt được model ngôn ngữ diễn đạt lại cho thao tác tạo, chỉnh sửa
+   và tạo biến thể; thư viện vẫn hiển thị prompt gốc.
+9. Thiếu credential, provider không khả dụng, model thiếu thao tác, phản hồi
    lỗi/không hợp lệ hoặc lưu tệp thất bại không được hiển thị như thành công.
-9. Provider/model và tham số ảnh không xuất hiện như lựa chọn cho người dùng.
-10. Offline tests bao phủ luồng chính và lỗi bằng provider giả lập. Live provider
+10. Provider/model và tham số ảnh không xuất hiện như lựa chọn cho người dùng.
+11. Offline tests bao phủ luồng chính và lỗi bằng provider giả lập. Live provider
     checks được ghi riêng, không suy ra từ offline tests.
 
 ## Giới hạn vận hành
 
 Local volume phù hợp cho MVP một máy. Cần backup volume và SQLite theo chính
 sách vận hành riêng. Triển khai nhiều instance hoặc yêu cầu độ bền cao cần
-đánh giá object storage và chiến lược migration. Provider giữ hoặc xử lý prompt
-và ảnh theo điều khoản của provider đã cấu hình.
+đánh giá object storage và chiến lược migration. Prompt được gửi tới cả model
+ngôn ngữ diễn giải và provider tạo ảnh; mỗi dịch vụ xử lý dữ liệu theo điều
+khoản tương ứng.

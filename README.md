@@ -10,6 +10,8 @@ Webapp tạo ảnh từ prompt, chỉnh ảnh đã lưu và tạo biến thể. 
 - SQLite lưu tài khoản và metadata; local volume lưu tệp ảnh.
 - FastAPI backend và React + TypeScript frontend.
 - OpenAI API hoặc endpoint OpenAI-compatible tự host, cấu hình ở server.
+- Mô tả tiếng Việt được model ngôn ngữ phía server hiểu và chuyển thành chỉ
+  dẫn cho model tạo ảnh; lịch sử vẫn lưu mô tả gốc.
 - Giao diện không cho chọn provider/model hoặc thông số ảnh.
 
 Xem [product charter](docs/project-charter.md),
@@ -25,7 +27,19 @@ database hoặc log.
 - Provider OpenAI dùng `IMAGE_PROVIDER=openai` và `OPENAI_API_KEY`.
 - Provider tự host dùng `IMAGE_PROVIDER=openai_compatible`,
   `IMAGE_API_BASE_URL`, `IMAGE_MODEL` và có thể đặt `IMAGE_API_KEY`.
+- Model hiểu prompt dùng `PROMPT_MODEL`, `PROMPT_API_BASE_URL` và
+  `PROMPT_API_KEY`. Mặc định là `gpt-6-luna` qua OpenAI Chat Completions;
+  nếu endpoint prompt trùng `OPENAI_BASE_URL`, khóa `PROMPT_API_KEY` để trống
+  sẽ dùng `OPENAI_API_KEY`. Endpoint tự host riêng dùng khóa `PROMPT_API_KEY`
+  của endpoint đó, hoặc để trống nếu endpoint không yêu cầu khóa.
 - `IMAGE_STORAGE_PATH` và `IMAGE_DATABASE_PATH` mặc định nằm trong `var/`.
+
+Server gửi mô tả tới model ngôn ngữ để hiểu yêu cầu tiếng Việt, rồi gửi prompt
+được diễn đạt lại tới model tạo ảnh. Mô tả gốc vẫn hiển thị và được lưu trong
+thư viện. Vì có thêm một lần gọi model, tạo ảnh có thể tốn thêm thời gian và chi
+phí. Nếu model ngôn ngữ lỗi hoặc thiếu credential, thao tác báo lỗi thay vì gửi
+mô tả tiếng Việt thô sang model ảnh. Khóa và endpoint cần được cấu hình trước
+khi chạy; xem [.env.example](.env.example).
 
 Để quản lý nhiều model, đặt `IMAGE_MODEL_CATALOG` thành JSON ánh xạ alias tới
 `provider` và `model`, rồi đặt `IMAGE_ACTIVE_MODEL` bằng alias cần chạy. Ví dụ:
@@ -91,21 +105,24 @@ Mở địa chỉ Vite in ra terminal. Vite chuyển `/api` đến backend ở
 Build frontend production bằng `cd frontend && npm ci && npm run build`. FastAPI
 phục vụ `frontend/dist` khi build tồn tại.
 
-## Docker Compose và ngrok
+## Docker Compose và Cloudflare Tunnel
 
 Dockerfile tạo image backend và frontend. Compose chạy container `database`
 để khởi tạo SQLite rồi thoát, backend FastAPI và frontend Nginx. SQLite/ảnh
-nằm trong một Docker volume; cổng frontend 8000 chỉ mở trên localhost. Ngrok
-chạy trong container riêng khi bật profile `publish`, với Basic Auth.
+nằm trong một Docker volume; cổng frontend mặc định `8088` chỉ mở trên localhost.
+Đặt `FRONTEND_PORT` trong `.env` để đổi port nếu cần. Cloudflare Quick Tunnel
+chạy trong container riêng khi bật profile `publish`; không cần token hoặc domain.
+URL `trycloudflare.com` tạm thời và đổi sau khi tạo tunnel mới.
 
 Chạy `python3 scripts/init-deployment-secrets.py`, rồi
 `docker compose build app frontend` và `docker compose up -d --wait`.
-Đặt `NGROK_AUTHTOKEN` và URL khả dụng
-(`NGROK_URL`, nếu cần) trong `.env` bị ignore. Sau đó chạy
-`docker compose --profile publish up -d --wait ngrok`.
+Sau đó chạy `docker compose --profile publish up -d cloudflared` và lấy URL từ
+`docker compose --profile publish logs --tail=50 cloudflared`. Quick Tunnel
+công khai cho người có URL; app vẫn yêu cầu đăng nhập. Chỉ dùng URL này để thử
+với người tin cậy. Dùng Cloudflare Access khi cấu hình domain ổn định.
 
-Xem [hướng dẫn triển khai, backup và restore](docs/deployment-compose-ngrok.md).
-Không nhập provider key hoặc ngrok token vào source hay Compose file.
+Xem [hướng dẫn triển khai, backup và restore](docs/deployment-compose-cloudflare.md).
+Không nhập credentials vào source hay Compose file.
 
 ## Kiểm tra
 
@@ -128,5 +145,5 @@ credential thật và provider endpoint đang hoạt động; kết quả đư�
 - [UI plan](docs/ui-plan.md)
 - [Learning log hiện tại](docs/learning-log/2026-11-08-image-studio.md)
 - [Codex workflow](docs/codex-workflow.md)
-- [Compose + ngrok deployment](docs/deployment-compose-ngrok.md)
+- [Compose + Cloudflare Tunnel deployment](docs/deployment-compose-cloudflare.md)
 - [Hồ sơ du lịch lịch sử](docs/archive/2026-10-14/README.md)

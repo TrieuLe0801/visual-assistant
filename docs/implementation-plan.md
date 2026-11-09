@@ -1,6 +1,6 @@
 # Studio ảnh AI — Kế hoạch triển khai
 
-Ngày cập nhật: 2026-11-08
+Ngày cập nhật: 2026-11-09
 Trạng thái: MVP implementation plan
 
 ## Kiến trúc
@@ -12,8 +12,11 @@ Trạng thái: MVP implementation plan
 - Lưu trữ: SQLite cho metadata, local volume cho ảnh.
 - Provider: interface độc lập provider; OpenAI API và endpoint tự host tương
   thích với Images API contract đã chọn.
+- Ngôn ngữ prompt: model ngôn ngữ riêng hiểu tiếng Việt và chuẩn hóa mô tả cho
+  provider ảnh; lưu prompt gốc, không lưu bản diễn đạt lại.
 - Admin cấu hình provider/model/credential/endpoint bằng biến môi trường ở
-  backend. Giao diện không lộ lựa chọn này.
+  backend, gồm `PROMPT_MODEL`, `PROMPT_API_BASE_URL` và `PROMPT_API_KEY` cho
+  model ngôn ngữ. Giao diện không lộ lựa chọn này.
 
 ## Contracts và dữ liệu
 
@@ -23,6 +26,10 @@ Trạng thái: MVP implementation plan
 `variation`), status (`processing`, `succeeded`, `failed`), ID ảnh nguồn nếu
 có, vị trí file, MIME type, provider/model metadata, lỗi đã làm sạch và thời
 điểm tạo/cập nhật. Không lưu credential vào database.
+
+`prompt` luôn là nội dung do người dùng nhập. Trước mỗi thao tác ảnh, prompt
+được gửi tới model ngôn ngữ đã cấu hình để hiểu tiếng Việt và trả về chỉ dẫn
+tiếng Anh cho image provider. Bản diễn đạt lại chỉ tồn tại trong request.
 
 Các thao tác chính:
 
@@ -48,6 +55,10 @@ Provider nhận prompt và, với thao tác sửa/biến thể, byte ảnh ngu�
 type. Provider trả byte ảnh và metadata an toàn. App kiểm tra định dạng và
 kích thước phản hồi trước khi lưu file.
 
+`ImageService` gọi prompt enhancer trước adapter ảnh trong generation, edit và
+variation. Nếu prompt enhancer lỗi thì operation được đánh dấu thất bại; không
+gửi prompt gốc chưa xử lý sang image provider.
+
 - `generate(prompt)` tạo ảnh mới.
 - `edit(source, prompt)` chỉnh ảnh nguồn theo prompt.
 - `variation(source, optional_prompt)` tạo biến thể. Provider có thể dùng API
@@ -70,6 +81,8 @@ kích thước phản hồi trước khi lưu file.
   đường dẫn file.
 - API key và session secret chỉ lấy từ environment/ignored `.env`; không lưu
   vào DB, response, trace hoặc log.
+- Prompt được gửi đến model ngôn ngữ diễn giải và image provider; nội dung prompt
+  không xuất hiện trong LangSmith trace.
 - Giới hạn độ dài prompt và kích thước phản hồi ảnh; lỗi không tạo trạng thái
   thành công.
 
@@ -99,6 +112,10 @@ kết quả live provider test hoặc trạng thái chưa chạy.
 ```dotenv
 IMAGE_PROVIDER=openai
 IMAGE_MODEL=gpt-image-2.5-sunburst
+PROMPT_MODEL=gpt-6-luna
+PROMPT_API_BASE_URL=https://api.openai.com/v1
+PROMPT_API_KEY=
+PROMPT_TIMEOUT_SECONDS=30
 OPENAI_API_KEY=
 OPENAI_BASE_URL=https://api.openai.com/v1
 IMAGE_API_BASE_URL=http://127.0.0.1:8001/v1
@@ -116,8 +133,9 @@ Với `IMAGE_PROVIDER=openai`, app dùng API chính thức và `OPENAI_API_KEY`.
 `OPENAI_BASE_URL` cho phép override endpoint. Với
 `IMAGE_PROVIDER=openai_compatible`, app dùng `IMAGE_MODEL`,
 `IMAGE_API_BASE_URL` và optional `IMAGE_API_KEY`. Đổi `SESSION_SECRET` trước
-khi deploy ngoài môi trường phát triển. Danh sách active nằm trong
-`.env.example`.
+khi deploy ngoài môi trường phát triển. Prompt model chỉ dùng lại
+`OPENAI_API_KEY` khi endpoint prompt trùng `OPENAI_BASE_URL`; endpoint riêng
+dùng `PROMPT_API_KEY`. Danh sách active nằm trong `.env.example`.
 
 ## Cách chạy local
 
@@ -143,4 +161,5 @@ Provider APIs có thể khác nhau về hỗ trợ edit/variation, định dạn
 Adapter contract, không phải UI, xử lý khác biệt. Smoke tests thật yêu cầu
 credential và model phù hợp. SQLite/local volume chưa cung cấp backup hoặc
 multi-host coordination. Synchronous provider calls giữ MVP đơn giản nhưng
-request có thể kéo dài; queue là phương án mở rộng sau này.
+request có thể kéo dài; tiền xử lý prompt thêm một lượt gọi model, latency và
+chi phí. Queue là phương án mở rộng sau này.

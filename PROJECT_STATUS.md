@@ -1,12 +1,13 @@
 # Project Status
 
-Last updated: 2026-11-08
+Last updated: 2026-11-09
 
 ## Current milestone
 
-MVP implemented and offline verified. Live OpenAI and self-hosted provider
-checks remain pending because no real credentials or endpoint were supplied for
-this verification.
+MVP implemented; its offline suite, including Vietnamese prompt interpretation
+tests, passes. OpenAI credentials are configured in ignored `.env`; the backend
+was recreated to load them. Read-only model listing returned HTTP 200, but
+successful image generation still needs a browser retry.
 
 Active plan: [docs/implementation-plan.md](docs/implementation-plan.md).
 Active charter: [docs/project-charter.md](docs/project-charter.md).
@@ -35,13 +36,16 @@ planner completion counts carry forward.
   and reusable security/image/time utilities without changing API routes.
 - Added server-selected LangChain Core model routing and metadata-only LangSmith
   operation traces; see [ADR 0006](docs/adr/0006-langchain-model-routing-langsmith-tracing.md).
+- Added server-side Vietnamese prompt interpretation for generation, editing and
+  variations; the library retains the user's original text. See
+  [ADR 0008](docs/adr/0008-vietnamese-prompt-interpretation.md).
 - Built an arm64 Docker image and healthy single-host Compose container with a
   persistent SQLite/image volume and file-backed session secret. A stopped-app
   backup restored successfully into a separate verification volume; see
-  [deployment guide](docs/deployment-compose-ngrok.md) and [ADR 0007](docs/adr/0007-single-host-compose-ngrok.md).
+  [deployment guide](docs/deployment-compose-cloudflare.md) and [ADR 0007](docs/adr/0007-single-host-compose-cloudflare.md).
 - Split Compose into a one-shot SQLite schema initializer, FastAPI backend,
-  Nginx frontend and optional ngrok publish service. Backend and frontend are
-  healthy; ngrok configuration validates without opening a public tunnel.
+  Nginx frontend and optional Cloudflare Quick Tunnel service. The tunnel is
+  running; its temporary public `/api/health` returned HTTP 200.
 
 ## Implementation status
 
@@ -50,18 +54,21 @@ planner completion counts carry forward.
 | 1. Tài khoản, quyền sở hữu và lưu trữ bền vững | Hoàn thành | Auth, owner-isolation, file access và restart tests |
 | 2. Generation, edit, variation và provider errors | Hoàn thành offline | Fake-provider, adapter, unsupported capability, invalid/oversized image và storage-failure tests |
 | 2a. LangChain model routing và LangSmith tracing | Hoàn thành offline | 6 model-routing/trace tests; chưa xác nhận LangSmith remote |
+| 2b. Hiểu prompt tiếng Việt | Offline verified; live model còn chờ | 2 HTTP mock/API tests qua; latest source image chưa được deploy; verify `PROMPT_MODEL` before rebuild |
 | 3. Giao diện và production build | Hoàn thành offline | SPA/static tests; TypeScript + Vite build passed |
-| 4. Live OpenAI/self-hosted smoke tests | Chưa chạy | Cần endpoint và credentials; không có model call trong lần kiểm chứng này |
+| 4. Live OpenAI/self-hosted smoke tests | Đang chờ retry generation | Lần gần nhất 502 do container chưa nhận key; backend đã recreate; GET `/models` 200, model cấu hình có trong danh sách |
 | 5. Docker Compose local deployment | Hoàn thành | backend/frontend images, database init exit 0, both long-running services healthy, HTTP proxy, backup/restore |
-| 6. Ngrok public tunnel | Compose sẵn sàng; chưa publish | Ngrok container/secret/profile config kiểm tra; chờ `NGROK_AUTHTOKEN` và domain khả dụng |
+| 6. Cloudflare public tunnel | Quick Tunnel đang chạy; URL tạm thời | Cloudflare returned HTTP 200 for public `/api/health`; no named domain or Access policy |
 
 ## Now
 
-1. Supply an available ngrok account/domain configuration, then verify the
-   public HTTPS endpoint with Basic Auth.
-2. When provider credentials and endpoint are available, run separate OpenAI and
-   self-hosted generation/edit/variation smoke checks.
-3. Schedule off-host copies of the documented stopped-app backup before
+1. Retry image generation in the browser. If it passes, verify prompt
+   interpretation separately before deploying the latest source image.
+2. If a stable public hostname is needed, create a named Cloudflare Tunnel,
+   configure its DNS routes and restrict access with Cloudflare Access.
+3. Verify `PROMPT_MODEL` against the configured API before rebuilding the latest
+   source image, then run separate OpenAI and self-hosted operation checks.
+4. Schedule off-host copies of the documented stopped-app backup before
    storing production data.
 
 ## Next
@@ -78,6 +85,8 @@ at startup. LangSmith tracing is opt-in and excludes prompt/image content.
 Live provider behavior and remote trace delivery remain unverified. SQLite and local files target a
 single application host; a manual backup/restore path exists, but scheduled
 off-host backup and multi-host coordination are not included.
+Each prompt is also sent to the configured language model for interpretation;
+this adds a model request, latency and cost before the image-provider request.
 Provider calls run synchronously, so a request can remain open while an image
 is generated.
 
@@ -94,6 +103,10 @@ is generated.
 - `npm ci --offline`: passed; no vulnerabilities reported.
 - `npm run build`: passed with Vite 8.3.6.
 - `git diff --check`: passed.
+- Vietnamese prompt interpreter change (2026-11-09): 2 focused HTTP mock/API
+  tests passed; full pytest suite 29 passed. isort, Black, flake8, Ruff,
+  frontend TypeScript/Vite build, Compose config and diff check passed. Live
+  prompt and image calls remain unverified.
 - `docker compose config --quiet`, `docker compose --profile publish config --quiet`,
   `docker compose build app frontend` and `docker compose up -d --wait`: passed.
 - Database initializer exited 0. Backend and frontend healthy. Local
@@ -103,7 +116,15 @@ is generated.
   Internal Compose-network request to `frontend:80/api/health`: HTTP 200.
 - Stopped-app volume backup restored into a separate volume; SQLite integrity
   check: `ok`; image directory present.
-- Ngrok Compose service, Basic Auth secret mount and shell syntax validated.
-  Tunnel not started; `NGROK_AUTHTOKEN` and `NGROK_URL` remain unset in `.env`.
-  Previous host CLI attempt hit `ERR_NGROK_334` on an occupied domain.
-- Live provider, LangSmith remote delivery, public HTTPS and browser-driven E2E checks: not run.
+- Cloudflare Quick Tunnel started in Compose with image
+  `cloudflare/cloudflared:latest`; connector registered over QUIC. Public
+  `/api/health` returned HTTP 200. URL is temporary and has no Access policy.
+- User's image-generation attempt returned HTTP 502. Cloudflare health stayed
+  HTTP 200. At failure time, `.env` had an OpenAI key but the backend container
+  had no `OPENAI_API_KEY`; the failed operation recorded a credentials error.
+- Recreated only the backend with
+  `docker compose up -d --no-deps --force-recreate app`. It is healthy and now
+  has the key. Read-only OpenAI `GET /models`: HTTP 200; configured image model
+  listed. No image-generation request was retried.
+- Live image generation, prompt interpretation, LangSmith remote delivery and
+  browser-driven E2E remain unverified.

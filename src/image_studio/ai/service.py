@@ -9,6 +9,7 @@ from langsmith import set_run_metadata, traceable
 from ..database import Database, ImageRecord
 from ..storage import LocalImageStorage
 from ..utils.image import ImageStorageError
+from .prompt_enhancer import IdentityPromptEnhancer, PromptEnhancer
 from .provider import (
     GeneratedImage,
     ImageProvider,
@@ -30,11 +31,16 @@ class ImageOperationError(Exception):
 
 class ImageService:
     def __init__(
-        self, database: Database, storage: LocalImageStorage, provider: ImageProvider
+        self,
+        database: Database,
+        storage: LocalImageStorage,
+        provider: ImageProvider,
+        prompt_enhancer: PromptEnhancer | None = None,
     ) -> None:
         self.database = database
         self.storage = storage
         self.provider = provider
+        self.prompt_enhancer = prompt_enhancer or IdentityPromptEnhancer()
 
     @traceable(
         name="image_studio.operation",
@@ -67,8 +73,9 @@ class ImageService:
         )
         stored_path: str | None = None
         try:
+            image_prompt = self.prompt_enhancer.enhance(prompt, operation)
             if operation == "generate":
-                result = self.provider.generate(prompt)
+                result = self.provider.generate(image_prompt)
             elif operation == "edit":
                 if source is None:
                     raise ImageProviderError("Source image is unavailable.")
@@ -77,7 +84,7 @@ class ImageService:
                     raise UnsupportedImageOperation(
                         "Configured image provider does not support editing."
                     )
-                result = edit(prompt, source[0], source[1])
+                result = edit(image_prompt, source[0], source[1])
             elif operation == "variation":
                 if source is None:
                     raise ImageProviderError("Source image is unavailable.")
@@ -86,7 +93,7 @@ class ImageService:
                     raise UnsupportedImageOperation(
                         "Configured image provider does not support variations."
                     )
-                result = variation(prompt, source[0], source[1])
+                result = variation(image_prompt, source[0], source[1])
             else:
                 raise UnsupportedImageOperation(
                     "This image operation is not supported."

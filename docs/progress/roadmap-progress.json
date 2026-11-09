@@ -1,10 +1,10 @@
 {
-  "version": 12,
+  "version": 13,
   "plan_id": "ai-image-studio-2026-11-08",
-  "updated": "2026-11-08",
+  "updated": "2026-11-09",
   "planning_status": "recorded",
   "implementation_status": "offline_verified_live_provider_checks_pending",
-  "deployment_status": "local_compose_verified_ngrok_endpoint_pending",
+  "deployment_status": "local_compose_verified_cloudflare_quick_tunnel_live",
   "active_charter": "docs/project-charter.md",
   "active_plan": "docs/implementation-plan.md",
   "current_log": "docs/learning-log/2026-11-08-image-studio.md",
@@ -15,8 +15,9 @@
     "docs/ui-plan.md",
     "docs/adr/0005-ai-image-studio.md",
     "docs/adr/0006-langchain-model-routing-langsmith-tracing.md",
-    "docs/adr/0007-single-host-compose-ngrok.md",
-    "docs/deployment-compose-ngrok.md",
+    "docs/adr/0007-single-host-compose-cloudflare.md",
+    "docs/adr/0008-vietnamese-prompt-interpretation.md",
+    "docs/deployment-compose-cloudflare.md",
     "Dockerfile",
     "compose.yaml",
     "deploy/nginx.conf",
@@ -28,6 +29,7 @@
     "src/image_studio/",
     "tests/test_image_studio.py",
     "tests/test_model_routing.py",
+    "tests/test_prompt_enhancer.py",
     "tests/test_deployment_config.py"
   ],
   "phases": [
@@ -54,6 +56,7 @@
         {"id": "fake_provider_checks", "done": true},
         {"id": "langchain_model_routing", "done": true},
         {"id": "langsmith_metadata_tracing_offline", "done": true},
+        {"id": "vietnamese_prompt_interpretation_offline", "done": true},
         {"id": "openai_live_smoke", "done": false},
         {"id": "self_hosted_live_smoke", "done": false}
       ]
@@ -72,16 +75,16 @@
     },
     {
       "id": "deployment",
-      "title": "Docker Compose và ngrok",
-      "status": "local_verified_public_pending",
+      "title": "Docker Compose và Cloudflare Tunnel",
+      "status": "local_verified_quick_tunnel_live",
       "tasks": [
         {"id": "compose_image_and_health", "done": true},
         {"id": "frontend_proxy_service", "done": true},
         {"id": "sqlite_initializer_service", "done": true},
-        {"id": "ngrok_compose_service_config", "done": true},
+        {"id": "cloudflare_compose_service_config", "done": true},
         {"id": "persistent_volume_and_session_secret", "done": true},
         {"id": "backup_restore_verification", "done": true},
-        {"id": "ngrok_public_https", "done": false}
+        {"id": "cloudflare_quick_tunnel_https", "done": true}
       ]
     }
   ],
@@ -91,8 +94,8 @@
     "uv_sync_locked": "passed",
     "image_studio_tests": "15 passed",
     "model_routing_tests": "6 passed",
-    "ngrok_config_tests": "3 passed",
-    "full_pytest_suite": "30 passed including 2 development-hook tests",
+    "prompt_interpretation_tests": "2 passed with mocked HTTP and API workflow",
+    "full_pytest_suite": "29 passed including 2 development-hook tests",
     "isort": "passed",
     "black": "passed",
     "flake8": "passed",
@@ -100,15 +103,15 @@
     "npm_ci_offline": "passed; no vulnerabilities reported",
     "frontend_build": "passed; TypeScript and Vite 8.3.6",
     "diff_check": "passed",
-    "live_openai": "not_run; credentials not supplied",
+    "live_openai": "read-only GET /models returned HTTP 200 and listed configured image model; prior generation 502 came from backend missing key; retry pending",
     "live_self_hosted": "not_run; endpoint/credentials not supplied",
     "langsmith_remote_delivery": "not_run; credentials not supplied",
     "compose_config": "passed",
     "docker_image_build": "passed; backend and frontend linux/arm64 images",
     "compose_app": "database exited 0; backend/frontend healthy; localhost health, SPA, proxy and auth status verified",
-    "ngrok_compose_config": "passed; publish profile, Basic Auth secret and shell syntax verified",
+    "cloudflare_compose_config": "passed; publish profile routes cloudflared to frontend:80",
     "backup_restore": "passed; separate-volume SQLite integrity ok and image directory present",
-    "ngrok_public_https": "not_run; new NGROK_AUTHTOKEN and available URL pending",
+    "cloudflare_quick_tunnel_https": "passed; temporary trycloudflare URL /api/health returned HTTP 200; Access not enabled",
     "browser_e2e": "not_run"
   },
   "historical_snapshot": "docs/archive/2026-10-14/sightseeing-implementation-plan.md",

@@ -276,13 +276,13 @@ function App() {
           <section className="page-content create-page">
             <button className="back-link" onClick={() => setView("library")}>← Quay lại thư viện</button>
             <div className="create-layout">
-              <div className="create-intro"><p className="eyebrow">BẮT ĐẦU TỪ Ý TƯỞNG</p><h1>Hãy tưởng tượng<br />điều gì đó.</h1><p>Mô tả hình ảnh bạn muốn tạo. Càng cụ thể về chủ thể, ánh sáng và cảm xúc, kết quả càng gần với hình dung của bạn.</p><div className="prompt-tip"><span>✳</span><p><strong>Mẹo nhỏ</strong><br />Nêu rõ chủ thể, bối cảnh, phong cách và ánh sáng để có kết quả tốt hơn.</p></div></div>
+              <div className="create-intro"><p className="eyebrow">BẮT ĐẦU TỪ Ý TƯỞNG</p><h1>Hãy tưởng tượng<br />điều gì đó.</h1><p>Bạn có thể mô tả bằng tiếng Việt. Hệ thống sẽ hiểu ý tưởng và diễn đạt lại thành hướng dẫn cho model tạo ảnh. Càng cụ thể về chủ thể, ánh sáng và cảm xúc, kết quả càng gần với hình dung của bạn.</p><div className="prompt-tip"><span>✳</span><p><strong>Mẹo nhỏ</strong><br />Nêu rõ chủ thể, bối cảnh, phong cách và ánh sáng để có kết quả tốt hơn.</p></div></div>
               <form className="prompt-card" onSubmit={createImage}>
                 <div className="prompt-card-head"><span className="card-step">01</span><span>HÌNH ẢNH MỚI</span><span className="prompt-count">{prompt.length} / 4.000</span></div>
                 <label className="visually-hidden" htmlFor="new-prompt">Mô tả hình ảnh</label>
                 <textarea id="new-prompt" autoFocus maxLength={4000} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ví dụ: Một căn nhà nhỏ bên bờ biển lúc hoàng hôn, phong cách tranh màu nước…" required />
-                <div className="prompt-card-foot"><span>✧ Ý tưởng của bạn được lưu cùng hình ảnh.</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
-                {working && <div className="progress-note" role="status">Đang gửi yêu cầu tới hệ thống tạo ảnh. Có thể mất một chút thời gian.</div>}
+                <div className="prompt-card-foot"><span>✧ Mô tả gốc được lưu cùng hình ảnh.</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
+                {working && <div className="progress-note" role="status">Đang xử lý mô tả và tạo hình ảnh. Có thể mất một chút thời gian.</div>}
               </form>
             </div>
           </section>
@@ -310,7 +310,7 @@ function App() {
                   </form>
                   <form className="action-form variation-form" onSubmit={(event) => void createDerived(event, "variations")}>
                     <label htmlFor="variation-prompt">Tạo biến thể <span>Tùy chọn · để trống dùng hướng mặc định</span></label>
-                    <textarea id="variation-prompt" maxLength={2000} value={variationPrompt} onChange={(event) => setVariationPrompt(event.target.value)} placeholder="Thêm hướng dẫn cho biến thể, nếu có…" />
+                    <textarea id="variation-prompt" maxLength={2000} value={variationPrompt} onChange={(event) => setVariationPrompt(event.target.value)} placeholder="Thêm hướng dẫn cho biến thể bằng tiếng Việt hoặc ngôn ngữ bạn muốn…" />
                     <button className="button secondary" type="submit" disabled={working}>{working ? "Đang xử lý…" : "Tạo biến thể"}</button>
                   </form>
                 </div>}

@@ -59,17 +59,17 @@
       và dữ liệu sau restart đều được kiểm tra.</p>
   </section>
   <section>
-    <h2>4. Docker Compose và ngrok — <span class="status">Local verified; public pending</span></h2>
+    <h2>4. Docker Compose và Cloudflare Tunnel — <span class="status">Quick Tunnel live; temporary URL</span></h2>
     <p>Backend và frontend có image riêng; SQLite initializer thoát 0; hai
-      service chạy dài hạn healthy. Ngrok Compose profile đã cấu hình và đang
-      chờ token/domain khả dụng để publish.</p>
+      service chạy dài hạn healthy. Cloudflare Quick Tunnel đã publish URL tạm thời;
+      endpoint public <code>/api/health</code> trả HTTP 200.</p>
   </section>
   <footer>
     <p>Markdown và progress JSON là trạng thái có thẩm quyền. Live provider checks
       cần credential thật; offline checks không thay thế chúng.</p>
     <p><a href="adr/0005-ai-image-studio.md">ADR 0005</a> ·
       <a href="adr/0006-langchain-model-routing-langsmith-tracing.md">ADR 0006</a> ·
-      <a href="adr/0007-single-host-compose-ngrok.md">ADR 0007</a> ·
+      <a href="adr/0007-single-host-compose-cloudflare.md">ADR 0007</a> ·
       <a href="archive/2026-10-14/README.md">Travel planner snapshots</a></p>
   </footer>
 </main>
