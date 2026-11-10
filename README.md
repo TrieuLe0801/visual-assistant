@@ -89,8 +89,12 @@ uv sync
 Terminal 1 — backend:
 
 ```bash
-uv run uvicorn image_studio.app:app --reload --app-dir src
+uv run uvicorn image_studio.app:create_app --factory --reload --app-dir src
 ```
+
+Set a unique `SESSION_SECRET` in an ignored `.env` before starting the backend.
+For local HTTP only, also set `SESSION_COOKIE_SECURE=false`. Docker Compose uses
+its existing `.secrets/session_secret` file and Secure cookies.
 
 Terminal 2 — frontend:
 

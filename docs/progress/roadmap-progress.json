@@ -1,7 +1,7 @@
 {
-  "version": 14,
+  "version": 15,
   "plan_id": "ai-image-studio-2026-11-08",
-  "updated": "2026-11-09",
+  "updated": "2026-11-10",
   "planning_status": "recorded",
   "implementation_status": "offline_verified_live_provider_checks_pending",
   "deployment_status": "local_compose_verified_cloudflare_quick_tunnel_live",
@@ -18,6 +18,8 @@
     "docs/adr/0007-single-host-compose-cloudflare.md",
     "docs/adr/0008-vietnamese-prompt-interpretation.md",
     "docs/adr/0009-image-batch-and-deletion.md",
+    "docs/adr/0010-security-guards.md",
+    "docs/security-audit-2026-11-10.md",
     "docs/deployment-compose-cloudflare.md",
     "Dockerfile",
     "compose.yaml",
@@ -77,6 +79,19 @@
       ]
     },
     {
+      "id": "security_audit",
+      "title": "Security audit và vá lỗi",
+      "status": "complete_offline_not_deployed",
+      "tasks": [
+        {"id": "session_secret_and_cookie", "done": true},
+        {"id": "auth_and_image_rate_limits", "done": true},
+        {"id": "api_cache_and_timing", "done": true},
+        {"id": "provider_response_bounds", "done": true},
+        {"id": "python311_pillow13_container", "done": true},
+        {"id": "live_security_rollout", "done": false}
+      ]
+    },
+    {
       "id": "deployment",
       "title": "Docker Compose và Cloudflare Tunnel",
       "status": "local_verified_quick_tunnel_live",
@@ -98,25 +113,26 @@
     "image_studio_tests": "15 passed",
     "model_routing_tests": "6 passed",
     "prompt_interpretation_tests": "2 passed with mocked HTTP and API workflow",
-    "full_pytest_suite": "32 passed including 2 development-hook tests after count/delete change",
+    "full_pytest_suite": "40 passed on Python 3.10 and Python 3.11 after security audit; 1 LangSmith missing-key warning",
     "count_delete_tests": "20 focused database/image API tests passed; frontend selector verified by TypeScript/Vite build and deployed asset check",
     "isort": "passed",
     "black": "passed",
     "flake8": "passed",
     "ruff": "passed",
     "npm_ci_offline": "passed; no vulnerabilities reported",
-    "frontend_build": "passed; TypeScript and Vite 8.3.6 after count/delete change",
+    "frontend_build": "passed; TypeScript and Vite 8.3.6 after security audit",
     "diff_check": "passed",
     "live_openai": "read-only GET /models returned HTTP 200 and listed configured image model; prior generation 502 came from backend missing key; retry pending",
     "live_self_hosted": "not_run; endpoint/credentials not supplied",
     "langsmith_remote_delivery": "not_run; credentials not supplied",
     "compose_config": "passed",
-    "docker_image_build": "passed; updated backend and frontend images built from feature-sign-in worktree",
+    "docker_image_build": "passed; prior deployed backend/frontend images plus isolated security-audit backend image built with Python 3.11.18 and Pillow 13.0.0",
     "compose_app": "updated backend/frontend healthy in existing visual-assistant stack; localhost health/front root HTTP 200, DELETE without auth 401, SQLite integrity ok",
     "cloudflare_compose_config": "passed; publish profile routes cloudflared to frontend:80",
     "backup_restore": "previous separate-volume restore passed; pre-change stopped-app archive passed gzip -t; updated live SQLite integrity ok",
     "cloudflare_quick_tunnel_https": "passed; new temporary URL https://registered-gen-wheels-antibodies.trycloudflare.com/api/health returned HTTP 200; Access not enabled",
-    "browser_e2e": "not_run"
+    "browser_e2e": "not_run",
+    "security_audit": "40 pytest passed on Python 3.10 and 3.11; checks/build passed; isolated Docker Python 3.11.18/Pillow 13.0.0; npm audit 0; pip-audit Python 3.11 0 known, Python 3.10 Pillow 12.3.0 39 advisories; not deployed"
   },
   "historical_snapshot": "docs/archive/2026-10-14/sightseeing-implementation-plan.md",
   "note": "Offline implementation is complete. Do not claim live provider behavior until separate credentialed smoke checks pass."

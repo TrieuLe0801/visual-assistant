@@ -475,3 +475,28 @@ returned HTTP 200 after recreation.
   is `sha256:88be60e7...`; asset `assets/index-CaFaOPXc.js` is served locally.
   Frontend is healthy and the Quick Tunnel `/api/health` returned HTTP 200.
   Live model calls and browser interaction remain unverified.
+
+### Security audit — 2026-11-10
+
+- Reviewed API auth, owner-scoped image access, provider adapters, image
+  validation, Compose/Nginx and locked dependencies. Findings, remediation and
+  residual risk are recorded in `docs/security-audit-2026-11-10.md` and ADR 0010.
+- `uv run --python 3.11 pytest -q`: 40 passed, 1 LangSmith warning for missing
+  hosted API key. `uv run --python 3.10 pytest -q`: 40 passed, same warning.
+  Focused security tests: 32 passed after provider response caps were added.
+- `uv run --python 3.11 isort --check-only . .codex/hooks/format_python.py`,
+  `uv run --python 3.11 black --check . .codex/hooks/format_python.py`,
+  `uv run --python 3.11 flake8 . .codex/hooks/format_python.py`,
+  `uv run --python 3.11 ruff check . .codex/hooks/format_python.py`,
+  `uv lock --check` and `git diff --check`: passed.
+- `npm run build` passed; `npm audit --omit=dev` found 0 vulnerabilities.
+  `npm audit` including development dependencies also found 0 vulnerabilities.
+  `uvx bandit -q -r src` found no issues.
+  `docker build --target app -t image-studio:security-audit .` passed. Isolated
+  container check reported Python 3.11.18, Pillow 13.0.0 and app factory import.
+- `pip-audit` on the locked Python 3.11 production dependency export found no
+  known vulnerabilities. Python 3.10 export reported 39 Pillow 12.3.0
+  advisories; app compatibility still passes on 3.10. Do not deploy 3.10 for
+  untrusted image processing while this remains unresolved.
+- No public tunnel, real account, live provider, browser or production rollout
+  was exercised. The existing Compose deployment remains on the previous image.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import time
 import uuid
 
 from ..utils.time import utc_now
@@ -10,6 +11,14 @@ from .connection import SQLiteConnectionFactory
 from .models import ImageRecord, User
 from .schema import SCHEMA_SQL
 from .settings import DatabaseSettings
+
+
+class RateLimitExceeded(Exception):
+    """A request exceeds an atomic, persistent application limit."""
+
+    def __init__(self, retry_after: int) -> None:
+        super().__init__("Request limit reached.")
+        self.retry_after = retry_after
 
 
 class Database:
@@ -149,6 +158,39 @@ class Database:
                 (utc_now(), owner_id, image_id),
             )
         return result.rowcount == 1
+
+    def consume_limits(
+        self,
+        rules: tuple[tuple[str, int, int], ...],
+        *,
+        now: int | None = None,
+    ) -> None:
+        """Consume all limits together so a rejected request consumes none."""
+        current = int(time.time()) if now is None else now
+        with self.connections.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            pending = []
+            for key, maximum, window_seconds in rules:
+                window_start = current - current % window_seconds
+                row = connection.execute(
+                    "SELECT window_start, hits FROM request_limits WHERE key = ?",
+                    (key,),
+                ).fetchone()
+                hits = row["hits"] if row and row["window_start"] == window_start else 0
+                if hits >= maximum:
+                    raise RateLimitExceeded(window_seconds - (current - window_start))
+                pending.append((key, window_start, hits + 1))
+            for key, window_start, hits in pending:
+                connection.execute(
+                    """INSERT INTO request_limits (key, window_start, hits)
+                    VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET
+                    window_start = excluded.window_start, hits = excluded.hits""",
+                    (key, window_start, hits),
+                )
+            connection.execute(
+                "DELETE FROM request_limits WHERE window_start < ?",
+                (current - 86400,),
+            )
 
     def close(self) -> None:
         return None

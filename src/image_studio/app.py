@@ -1,5 +1,6 @@
 """FastAPI application for private AI image creation and editing."""
 
+import hashlib
 import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -19,7 +20,7 @@ from .ai import (
     build_provider,
 )
 from .config import Settings
-from .database import Database, ImageRecord, User
+from .database import Database, ImageRecord, RateLimitExceeded, User
 from .storage import LocalImageStorage
 from .utils.image import IMAGE_EXTENSIONS, ImageStorageError
 from .utils.security import SessionCodec, hash_password, verify_password
@@ -75,6 +76,7 @@ def create_app(
     settings.validate()
     injected_provider = provider is not None
     session_codec = SessionCodec(settings.session_secret, settings.session_ttl_seconds)
+    dummy_password_hash = hash_password("unused-password-for-timing-equality")
     database = database or Database(settings.database)
     storage = storage or LocalImageStorage(settings.image_storage_path)
     provider = provider or build_provider(settings)
@@ -103,6 +105,31 @@ def create_app(
         lifespan=lifespan,
     )
 
+    @app.middleware("http")
+    async def protect_api_responses(request: Request, call_next) -> Response:
+        response = await call_next(request)
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+            response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
+    def enforce_limits(rules: tuple[tuple[str, int, int], ...]) -> None:
+        try:
+            database.consume_limits(rules)
+        except RateLimitExceeded as exc:
+            raise HTTPException(
+                status_code=429,
+                detail="Request limit reached. Try again later.",
+                headers={"Retry-After": str(exc.retry_after)},
+            ) from exc
+
+    def enforce_image_limit(owner_id: str) -> None:
+        enforce_limits(
+            (("image:global", 120, 86400), (f"image:user:{owner_id}", 24, 86400))
+        )
+
     def require_user(request: Request) -> User:
         token = request.cookies.get(SESSION_COOKIE_NAME)
         user_id = session_codec.read(token) if token else None
@@ -123,6 +150,12 @@ def create_app(
         email = _normalize_email(payload.email)
         _validate_email(email)
         _validate_password(payload.password)
+        enforce_limits(
+            (
+                ("register:global", 12, 3600),
+                (f"register:email:{_email_key(email)}", 3, 3600),
+            )
+        )
         if database.get_user_by_email(email) is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -147,8 +180,16 @@ def create_app(
     @app.post("/api/auth/login", response_model=UserOutput)
     def login(payload: CredentialsInput, response: Response) -> UserOutput:
         email = _normalize_email(payload.email)
+        enforce_limits(
+            (
+                ("login:global", 300, 900),
+                (f"login:email:{_email_key(email)}", 20, 900),
+            )
+        )
         user = database.get_user_by_email(email)
-        if user is None or not verify_password(payload.password, user.password_hash):
+        password_hash = user.password_hash if user else dummy_password_hash
+        password_valid = verify_password(payload.password, password_hash)
+        if user is None or not password_valid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Email or password is incorrect.",
@@ -213,6 +254,7 @@ def create_app(
         payload: PromptInput, user: Annotated[User, Depends(require_user)]
     ) -> ImageOutput:
         prompt = _validate_prompt(payload.prompt)
+        enforce_image_limit(user.id)
         return _run_operation(
             service=image_service,
             owner_id=user.id,
@@ -252,6 +294,7 @@ def create_app(
         prompt = _validate_prompt(payload.prompt)
         parent = _owned_image(database, user.id, image_id)
         source, mime_type = _read_source(storage, parent)
+        enforce_image_limit(user.id)
         return _run_operation(
             service=image_service,
             owner_id=user.id,
@@ -277,6 +320,7 @@ def create_app(
         )
         parent = _owned_image(database, user.id, image_id)
         source, mime_type = _read_source(storage, parent)
+        enforce_image_limit(user.id)
         return _run_operation(
             service=image_service,
             owner_id=user.id,
@@ -378,6 +422,10 @@ def _normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def _email_key(email: str) -> str:
+    return hashlib.sha256(email.encode("utf-8")).hexdigest()
+
+
 def _validate_email(email: str) -> None:
     if len(email) > 254 or not EMAIL_PATTERN.fullmatch(email):
         raise HTTPException(status_code=422, detail="Enter a valid email address.")
@@ -435,6 +483,3 @@ def _image_output(record: ImageRecord | None) -> ImageOutput:
 
 def _mime_extension(mime_type: str) -> str:
     return IMAGE_EXTENSIONS.get(mime_type, "img")
-
-
-app = create_app()

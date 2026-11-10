@@ -34,6 +34,7 @@ const errorMessages: Record<string, string> = {
   "Image storage is unavailable.": "Không lưu được ảnh. Vui lòng thử lại sau.",
   "Image was not found.": "Ảnh không còn trong thư viện.",
   "An image being created cannot be deleted.": "Ảnh đang được tạo. Hãy thử xóa sau.",
+  "Request limit reached. Try again later.": "Đã đạt giới hạn yêu cầu. Vui lòng thử lại sau.",
 };
 
 function displayError(message: string): string {

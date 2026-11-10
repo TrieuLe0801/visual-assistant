@@ -12,7 +12,7 @@ COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=frontend-build /app/frontend/dist/ /usr/share/nginx/html/
 EXPOSE 80
 
-FROM python:3.10-slim-bookworm AS app
+FROM python:3.11-slim-bookworm AS app
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.19 /uv /uvx /bin/
 ENV UV_PYTHON_DOWNLOADS=0 \
@@ -31,4 +31,4 @@ RUN useradd --system --uid 10001 --create-home studio \
 USER studio
 
 EXPOSE 8000
-CMD ["/app/.venv/bin/uvicorn", "image_studio.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/.venv/bin/uvicorn", "image_studio.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

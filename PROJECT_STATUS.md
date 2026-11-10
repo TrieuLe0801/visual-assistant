@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 ## Current milestone
 
@@ -9,6 +9,13 @@ images from their library. Offline tests and the frontend build pass. The
 updated backend/frontend are running in the existing Compose stack; local and
 public health checks returned HTTP 200. Live image generation still needs a
 browser retry.
+
+Security audit fixes are implemented and verified offline in this worktree:
+explicit session secret, Secure cookie default, API no-store headers, persistent
+safety rate limits, bounded provider responses and Pillow 13 in the Python 3.11
+deployment image. The running Compose stack has **not** been updated with these
+security changes. See [audit report](docs/security-audit-2026-11-10.md) and
+[ADR 0010](docs/adr/0010-security-guards.md).
 
 Active plan: [docs/implementation-plan.md](docs/implementation-plan.md).
 Active charter: [docs/project-charter.md](docs/project-charter.md).
@@ -50,6 +57,9 @@ planner completion counts carry forward.
 - Split Compose into a one-shot SQLite schema initializer, FastAPI backend,
   Nginx frontend and optional Cloudflare Quick Tunnel service. The tunnel is
   running; its temporary public `/api/health` returned HTTP 200.
+- Audited source and dependencies; patched confirmed session, abuse, response
+  buffering, cache and account-timing risks. Python 3.10 still resolves Pillow
+  12.3.0 with known advisories; use Python 3.11 for deployment.
 
 ## Implementation status
 
@@ -64,16 +74,19 @@ planner completion counts carry forward.
 | 5. Docker Compose local deployment | Hoàn thành | backend/frontend images, database init exit 0, both long-running services healthy, HTTP proxy, backup/restore |
 | 6. Cloudflare public tunnel | Quick Tunnel đang chạy; URL tạm thời | Cloudflare returned HTTP 200 for public `/api/health`; no named domain or Access policy |
 | 7. Chọn 1–6 ảnh và xóa ảnh | Đã deploy; live generation còn chờ | Offline API tests, frontend build, Compose health và public health qua |
+| 8. Security audit và vá lỗi | Hoàn thành offline; chưa deploy | 40 tests trên Python 3.10 và 3.11, style checks, dependency audit, frontend build, isolated Docker build |
 
 ## Now
 
 1. Retry image generation in the browser, including a multi-image action.
    Verify prompt interpretation and output separately from health checks.
-2. If a stable public hostname is needed, create a named Cloudflare Tunnel,
+2. Review and roll out the security-patched images with a data backup; the
+   current public stack still runs the prior image.
+3. If a stable public hostname is needed, create a named Cloudflare Tunnel,
    configure its DNS routes and restrict access with Cloudflare Access.
-3. Verify `PROMPT_MODEL` against the configured API, then run separate OpenAI
+4. Verify `PROMPT_MODEL` against the configured API, then run separate OpenAI
    and self-hosted operation checks.
-4. Schedule off-host copies of the documented stopped-app backup before
+5. Schedule off-host copies of the documented stopped-app backup before
    storing production data.
 
 ## Next

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import importlib
 from io import BytesIO
 from pathlib import Path
 
@@ -117,6 +118,7 @@ def test_register_login_logout_and_password_protection(client: TestClient) -> No
     account = register(client, "User@Example.com")
     assert account["email"] == "user@example.com"
     assert client.get("/api/auth/me").json()["id"] == account["id"]
+    assert client.get("/api/auth/me").headers["cache-control"] == "no-store"
 
     assert client.post("/api/auth/logout").status_code == 204
     assert client.get("/api/auth/me").status_code == 401
@@ -154,6 +156,8 @@ def test_generate_persists_prompt_file_and_owner_scope(
     file_response = client.get(record["file_url"])
     assert file_response.status_code == 200
     assert file_response.headers["content-type"] == "image/png"
+    assert file_response.headers["cache-control"] == "no-store"
+    assert file_response.headers["x-content-type-options"] == "nosniff"
     assert file_response.content == PNG_BYTES
     assert client.get("/api/images").json()[0]["prompt"] == "A blue house at dusk"
 
@@ -377,6 +381,63 @@ def test_prompt_validation_blocks_blank_and_oversized_requests(
     )
 
 
+def test_image_requests_stop_before_provider_when_daily_budget_is_exhausted(
+    client: TestClient, fake_provider: FakeProvider
+) -> None:
+    register(client, "budget@example.com")
+    for _ in range(24):
+        assert (
+            client.post(
+                "/api/images/generate", json={"prompt": "A small tree"}
+            ).status_code
+            == 201
+        )
+    blocked = client.post("/api/images/generate", json={"prompt": "One more"})
+    assert blocked.status_code == 429
+    assert int(blocked.headers["retry-after"]) > 0
+    assert blocked.headers["cache-control"] == "no-store"
+    assert len(fake_provider.calls) == 24
+    assert len(client.get("/api/images").json()) == 24
+
+
+def test_login_attempts_are_limited_without_account_existence_disclosure(
+    client: TestClient,
+) -> None:
+    for _ in range(20):
+        response = client.post(
+            "/api/auth/login",
+            json={"email": "unknown@example.com", "password": "wrong-password"},
+        )
+        assert response.status_code == 401
+    blocked = client.post(
+        "/api/auth/login",
+        json={"email": "unknown@example.com", "password": "wrong-password"},
+    )
+    assert blocked.status_code == 429
+    assert int(blocked.headers["retry-after"]) > 0
+
+
+def test_unknown_account_still_runs_password_verification(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app_module = importlib.import_module("image_studio.app")
+    actual_verify = app_module.verify_password
+    checked_hashes = []
+
+    def record_verify(password: str, encoded: str) -> bool:
+        checked_hashes.append(encoded)
+        return actual_verify(password, encoded)
+
+    monkeypatch.setattr(app_module, "verify_password", record_verify)
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "unknown@example.com", "password": "wrong-password"},
+    )
+    assert response.status_code == 401
+    assert len(checked_hashes) == 1
+    assert checked_hashes[0].startswith("scrypt$")
+
+
 def test_registration_rejects_passwords_outside_ui_limits(client: TestClient) -> None:
     short = client.post(
         "/api/auth/register",
@@ -450,5 +511,30 @@ def test_adapter_maps_unsupported_edit_endpoint_to_clear_capability_error() -> N
     try:
         with pytest.raises(UnsupportedImageOperation, match="does not support"):
             provider.variation("Make a variation", PNG_BYTES, "image/png")
+    finally:
+        provider.close()
+
+
+def test_adapter_rejects_oversized_streamed_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from image_studio.ai import openai_compatible
+
+    monkeypatch.setattr(openai_compatible, "MAX_PROVIDER_RESPONSE_BYTES", 32)
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                stream=httpx.ByteStream(b"{" + b"a" * 33),
+                request=request,
+            )
+        ),
+    )
+    try:
+        with pytest.raises(ImageProviderError, match="response is too large"):
+            provider.generate("A lantern")
     finally:
         provider.close()

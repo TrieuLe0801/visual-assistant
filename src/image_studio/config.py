@@ -77,7 +77,7 @@ class Settings:
             api_base_url=base_url.rstrip("/"),
             api_key=api_key,
             session_secret=_session_secret_from_env(),
-            session_cookie_secure=os.getenv("SESSION_COOKIE_SECURE", "false").lower()
+            session_cookie_secure=os.getenv("SESSION_COOKIE_SECURE", "true").lower()
             in {"1", "true", "yes"},
             session_ttl_seconds=int(os.getenv("SESSION_TTL_SECONDS", "1209600")),
             provider_timeout_seconds=float(
@@ -165,10 +165,15 @@ def _session_secret_from_env() -> str:
     path = os.getenv("SESSION_SECRET_FILE")
     if path:
         try:
-            return Path(path).read_text(encoding="utf-8").strip()
+            secret = Path(path).read_text(encoding="utf-8").strip()
         except OSError as exc:
             raise ValueError("SESSION_SECRET_FILE could not be read.") from exc
-    return os.getenv("SESSION_SECRET", "development-only-change-this-session-secret")
+    else:
+        secret = os.getenv("SESSION_SECRET", "").strip()
+    public_sample = "development-only-change-this-session-secret"
+    if len(secret.encode("utf-8")) < 24 or secret == public_sample:
+        raise ValueError("Set a unique SESSION_SECRET or SESSION_SECRET_FILE.")
+    return secret
 
 
 def make_settings(
