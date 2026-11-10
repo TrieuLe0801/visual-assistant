@@ -13,7 +13,8 @@ browser retry.
 Security audit fixes are implemented and verified offline in this worktree:
 explicit session secret, Secure cookie default, API no-store headers, persistent
 safety rate limits, bounded provider responses and Pillow 13 in the Python 3.11
-deployment image. The running Compose stack has **not** been updated with these
+Trixie deployment image. Docker Scout found 27 residual runtime advisories,
+none high or critical. The running Compose stack has **not** been updated with these
 security changes. See [audit report](docs/security-audit-2026-11-10.md) and
 [ADR 0010](docs/adr/0010-security-guards.md).
 

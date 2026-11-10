@@ -500,3 +500,11 @@ returned HTTP 200 after recreation.
   untrusted image processing while this remains unresolved.
 - No public tunnel, real account, live provider, browser or production rollout
   was exercised. The existing Compose deployment remains on the previous image.
+- Docker Scout on the original Bookworm app image reported 121 findings (16
+  high). Switched runtime to Python 3.11 slim Trixie, applied Debian upgrades
+  and removed uv/pip/setuptools/wheel from the final stage. Final arm64 image
+  scan: 27 findings (0 critical, 0 high, 1 medium, 26 low). The medium
+  finding is Debian `tar` CVE-2025-45582; the scanner lists no fixed version.
+  Rebuilt the final image and verified Python 3.11.18, Pillow 13.0.0 and app
+  factory import inside an isolated container. The container's TestClient
+  startup and `GET /api/health` returned 200 with `Cache-Control: no-store`.

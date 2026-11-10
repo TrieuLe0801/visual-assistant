@@ -25,7 +25,10 @@ previous session-secret fallback was predictable outside Compose, and Pillow
   responses. Apply the same password verification work to unknown accounts.
 - Stream and cap provider JSON responses before parsing them: 30 MiB for image
   responses and 128 KiB for prompt-model responses.
-- Use Python 3.11 and Pillow 13.0.0 in the deployment image. Keep Python 3.10
+- Use the Python 3.11 slim Trixie base and Pillow 13.0.0 in the deployment image.
+  Upgrade Debian packages during the build and copy only the installed app
+  environment from a separate build stage. Remove pip, setuptools and wheel
+  from the runtime image. Keep Python 3.10
   compatibility with Pillow 12.3.0 for development; do not deploy that runtime
   for untrusted image processing while its advisories remain unresolved.
 
@@ -40,6 +43,8 @@ previous session-secret fallback was predictable outside Compose, and Pillow
   A valid 20 MiB image encoded in base64 fits within the 30 MiB JSON cap.
 - Python 3.10 remains functionally supported, but its Pillow 12.3.0 branch has
   a known dependency risk. Revisit when a supported patched release exists.
+- The final arm64 runtime image still has Debian package advisories with no
+  current fix. Rebuild and rescan after base-image or Debian security updates.
 
 ## Review triggers
 
