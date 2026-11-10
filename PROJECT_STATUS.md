@@ -18,6 +18,10 @@ none high or critical. The running Compose stack has **not** been updated with t
 security changes. See [audit report](docs/security-audit-2026-11-10.md) and
 [ADR 0010](docs/adr/0010-security-guards.md).
 
+Python support is now `>=3.11`; the active lockfile requires Pillow 13.0.0+.
+Python 3.10 is rejected before dependency installation. See
+[ADR 0011](docs/adr/0011-drop-python-310-for-pillow-security.md).
+
 Active plan: [docs/implementation-plan.md](docs/implementation-plan.md).
 Active charter: [docs/project-charter.md](docs/project-charter.md).
 Current log: [docs/learning-log/2026-11-08-image-studio.md](docs/learning-log/2026-11-08-image-studio.md).
@@ -59,8 +63,8 @@ planner completion counts carry forward.
   Nginx frontend and optional Cloudflare Quick Tunnel service. The tunnel is
   running; its temporary public `/api/health` returned HTTP 200.
 - Audited source and dependencies; patched confirmed session, abuse, response
-  buffering, cache and account-timing risks. Python 3.10 still resolves Pillow
-  12.3.0 with known advisories; use Python 3.11 for deployment.
+  buffering, cache and account-timing risks. Raised the minimum Python version
+  to 3.11 so no supported environment resolves vulnerable Pillow 12.3.0.
 
 ## Implementation status
 
@@ -75,7 +79,7 @@ planner completion counts carry forward.
 | 5. Docker Compose local deployment | Hoàn thành | backend/frontend images, database init exit 0, both long-running services healthy, HTTP proxy, backup/restore |
 | 6. Cloudflare public tunnel | Quick Tunnel đang chạy; URL tạm thời | Cloudflare returned HTTP 200 for public `/api/health`; no named domain or Access policy |
 | 7. Chọn 1–6 ảnh và xóa ảnh | Đã deploy; live generation còn chờ | Offline API tests, frontend build, Compose health và public health qua |
-| 8. Security audit và vá lỗi | Hoàn thành offline; chưa deploy | 40 tests trên Python 3.10 và 3.11, style checks, dependency audit, frontend build, isolated Docker build |
+| 8. Security audit và vá lỗi | Hoàn thành offline; chưa deploy | 40 tests trên Python 3.11, dependency audit sạch, Python 3.10 bị từ chối, Docker Scout còn 27 cảnh báo mức trung bình/thấp |
 
 ## Now
 
@@ -111,7 +115,13 @@ is generated.
 
 ## Verification
 
-- Project Python: CPython 3.10.21 via uv; system `python3` is 3.9.6.
+- Current project Python: CPython 3.11.16 via uv; Pillow 13.0.0. System
+  `python3` is 3.9.6. The earlier Python 3.10.21 checks below are historical.
+- Python 3.10/Pillow follow-up: `uv run pytest -q` 40 passed on Python 3.11;
+  isort, Black, flake8, Ruff, Bandit, lock check, frontend build and isolated
+  Docker build passed. `pip-audit` found no known vulnerabilities in the locked
+  production dependencies. Explicit Python 3.10 selection failed before
+  installation, as required. The running Compose stack was not updated.
 - `uv sync --locked`: passed; 58 packages checked.
 - `uv lock --check`: passed; 66 packages resolved.
 - `uv run pytest tests/test_image_studio.py`: 15 passed.

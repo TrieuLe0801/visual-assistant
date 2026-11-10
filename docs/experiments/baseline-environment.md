@@ -3,6 +3,8 @@
 Last updated: 2026-09-28
 Status: Historical travel-planner environment snapshot. See
 `image-studio-environment.md` for the active product baseline.
+Current image-studio Python support is `>=3.11` under ADR 0011; the Python 3.10
+values below are preserved historical measurements.
 
 The measurements and project-state notes below describe the earlier environment
 and travel-planner scope. Preserve those captured values as historical evidence.

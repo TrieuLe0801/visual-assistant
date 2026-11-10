@@ -28,13 +28,23 @@ tunnel, real user data or live provider was exercised.
 - No tracked secret file was found in the repository search. npm audit reported
   zero known vulnerabilities.
 
+## Python 3.10 and Pillow follow-up
+
+The earlier audit left a supported Python 3.10 branch resolving Pillow 12.3.0.
+ADR 0011 closes that branch: project metadata now requires Python `>=3.11`,
+`.python-version` is 3.11, and `uv.lock` contains only Pillow 13.0.0. An
+explicit `uv run --python 3.10 --locked ...` fails with the project-version
+error before installing Pillow. A fresh locked Python 3.11 production export
+has no known `pip-audit` vulnerabilities. The original 39-advisory result
+remains historical evidence, not an active supported dependency path.
+
 ## Residual risk and limits
 
-- Python 3.10 resolves Pillow 12.3.0. `pip-audit` reported 39 advisories for
-  that version, with 13.0.0 listed as the fix; Pillow 13 drops Python 3.10.
-  The app only accepts PNG/JPEG/WebP, so the audit count does not mean all 39
-  advisories are reachable here. Do not expose a Python 3.10 deployment to
-  untrusted image data. [Pillow 13 release notes](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html), [Pillow advisories](https://github.com/python-pillow/Pillow/security/advisories).
+- Hosts pinned to Python 3.10 cannot run the current project. They must upgrade
+  Python before running it. Historical Pillow 12.3.0 findings should not be
+  interpreted as 39 reachable attack paths in this app.
+  [Pillow 13 release notes](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html),
+  [Pillow support matrix](https://pillow.readthedocs.io/en/stable/installation/python-support.html).
 - Fixed global windows can be exhausted deliberately, causing temporary 429s
   for legitimate users. Quick Tunnel has no Access policy. A trusted edge and
   account admission controls are still needed before broad public use.
@@ -64,3 +74,8 @@ tunnel, real user data or live provider was exercised.
   analyzed local arm64 images. The final report is summarized above.
 - Python 3.11 locked production dependency export: `pip-audit` found no known
   vulnerabilities. Python 3.10 export: 39 Pillow 12.3.0 advisories.
+- Follow-up: `uv sync --locked` selected CPython 3.11.16 and Pillow 13.0.0;
+  `uv run --python 3.10 --locked ...` failed on `requires-python >=3.11` as
+  expected. A fresh locked production export passed `pip-audit`; final Docker
+  rebuild and isolated HTTP health check passed. Docker Scout still reported
+  27 OS findings (0 high/critical).

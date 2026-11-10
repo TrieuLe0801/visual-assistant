@@ -508,3 +508,30 @@ returned HTTP 200 after recreation.
   Rebuilt the final image and verified Python 3.11.18, Pillow 13.0.0 and app
   factory import inside an isolated container. The container's TestClient
   startup and `GET /api/health` returned 200 with `Cache-Control: no-store`.
+
+### Python 3.10 and Pillow security closure — 2026-11-10
+
+- Pillow 13.0.0 is the patched release for the prior Pillow 12.3.0 advisories,
+  but it dropped Python 3.10 support. ADR 0011 raises project support to
+  Python `>=3.11`. Updated `.python-version`, `pyproject.toml`, `uv.lock`,
+  formatter/linter targets, project instructions and deployment guidance.
+  The previous Python 3.10 environment capture remains historical.
+- `uv lock` resolved 59 packages; `uv sync --locked` selected CPython 3.11.16
+  and Pillow 13.0.0. `uv run --python 3.10 --locked ...` failed as expected
+  because the interpreter does not meet `requires-python >=3.11`. The lockfile
+  no longer contains Pillow 12.3.0.
+- Focused `uv run pytest tests/test_image_studio.py tests/test_prompt_enhancer.py
+  -q`: 24 passed. After updating UTC handling for the Python 3.11 Ruff target,
+  `uv run pytest tests/test_database.py -q`: 4 passed and full `uv run pytest
+  -q`: 40 passed.
+- `uv run isort --check-only . .codex/hooks/format_python.py`, Black, flake8,
+  Ruff, `uvx bandit -q -r src`, `uv lock --check`, Compose config and
+  `git diff --check`: passed. `npm run build`: passed.
+- Locked production dependency export audited with `pip-audit`: no known
+  vulnerabilities. `docker build --target app -t image-studio:security-audit .`
+  passed. An isolated container reported Python 3.11.18, Pillow 13.0.0 and
+  `GET /api/health` HTTP 200 with `Cache-Control: no-store`. Docker Scout on
+  the final arm64 image again reported 27 OS findings, none high or critical.
+- No live provider, public tunnel or existing Compose stack was exercised.
+  The Docker image used for the previous deployment remains active until a
+  separate rollout.

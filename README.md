@@ -80,7 +80,7 @@ Chi tiết biến môi trường: [.env.example](.env.example).
 
 ## Chạy local
 
-Yêu cầu Python `>=3.10`, `uv`, Node.js và npm. Cài dependencies Python:
+Yêu cầu Python `>=3.11`, `uv`, Node.js và npm. Cài dependencies Python:
 
 ```bash
 uv sync

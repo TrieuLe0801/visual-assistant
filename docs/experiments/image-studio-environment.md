@@ -3,6 +3,10 @@
 Captured: 2026-11-08
 Status: Initial toolchain inventory; project Python runtime verified.
 
+This is the initial snapshot. Current support is Python `>=3.11` after
+[ADR 0011](../adr/0011-drop-python-310-for-pillow-security.md); the recorded
+Python 3.10 measurements below remain historical.
+
 ## Product runtime
 
 - Required Python: `>=3.10`.

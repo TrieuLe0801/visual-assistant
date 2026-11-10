@@ -3,6 +3,7 @@
 Date: 2026-11-10
 Status: Accepted
 Amends: ADR 0005 and ADR 0007
+Python 3.10 compatibility decision superseded by ADR 0011.
 
 ## Context
 

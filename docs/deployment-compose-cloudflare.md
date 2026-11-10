@@ -123,9 +123,9 @@ volume until the restore is verified.
   the app service to multiple containers.
 - Keep `.secrets/` and backup archives out of Git and image builds. Changing the
   session secret signs out all users.
-- The backend image uses Python 3.11 and Pillow 13.0.0. Python 3.10 remains
-  supported for development but resolves Pillow 12.3.0, which has known
-  security advisories; do not serve untrusted images from a Python 3.10 runtime.
+- The project requires Python 3.11 or newer and Pillow 13.0.0 or newer. Python
+  3.10 is unsupported because Pillow 13 dropped it and Pillow 12.3.0 has known
+  security advisories. The backend image uses Python 3.11 and Pillow 13.0.0.
 - Before rebuilding an existing deployment, retain the prior app image tag and
   a data backup. Recreate the container from the prior image tag for code
   rollback. SQLite schema changes may need a matching data restore.
