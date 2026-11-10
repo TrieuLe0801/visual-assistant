@@ -8,7 +8,8 @@ Status: MVP interface
 - Auth screen: đăng nhập và đăng ký bằng email/mật khẩu.
 - Thư viện: ảnh theo thứ tự mới nhất, trạng thái và prompt tóm tắt.
 - Tạo ảnh: một prompt văn bản, hỗ trợ mô tả bằng tiếng Việt, và nút tạo. Không
-  có lựa chọn provider, model, tỉ lệ, kích thước hoặc số lượng ảnh.
+  chỉ có lựa chọn số lượng 1–6 ảnh; không có lựa chọn provider, model, tỉ lệ,
+  kích thước hoặc tham số ảnh khác.
 - Chi tiết ảnh: ảnh, prompt đầy đủ, trạng thái, thời điểm, liên kết tải, ảnh
   nguồn/ảnh liên quan, form chỉnh sửa và form tạo biến thể.
 

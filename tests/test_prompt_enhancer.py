@@ -7,6 +7,7 @@ from io import BytesIO
 from pathlib import Path
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -151,5 +152,31 @@ def test_prompt_model_failure_stops_image_provider_and_records_failure(
             assert record["prompt"] == "Một con mèo"
             assert record["status"] == "failed"
             assert record["file_url"] is None
+    finally:
+        enhancer.close()
+
+
+def test_prompt_model_rejects_oversized_streamed_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from image_studio.ai import prompt_enhancer
+    from image_studio.ai.provider import ImageProviderError
+
+    monkeypatch.setattr(prompt_enhancer, "MAX_PROMPT_RESPONSE_BYTES", 32)
+    enhancer = OpenAICompatiblePromptEnhancer(
+        base_url="https://api.openai.com/v1",
+        api_key="test-key",
+        model="test-chat",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                stream=httpx.ByteStream(b"{" + b"a" * 33),
+                request=request,
+            )
+        ),
+    )
+    try:
+        with pytest.raises(ImageProviderError, match="response is too large"):
+            enhancer.enhance("Một con mèo", "generate")
     finally:
         enhancer.close()

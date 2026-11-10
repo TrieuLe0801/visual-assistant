@@ -58,8 +58,12 @@ Quick Tunnel URLs change when the tunnel process restarts. Stop publishing with
 
 Quick Tunnel has no Cloudflare Access policy by default. Anyone with the URL can
 reach the app's registration and login screens. The app scopes image data by
-owner, but has no signup limit or generation quota. Use Quick Tunnel only for
-trusted testing. To require email verification for a host-run tunnel, start
+owner and applies persistent safety rate limits: 12 registrations/hour globally,
+3/hour per email, 300 logins/15 minutes globally, 20/15 minutes per email,
+120 image operations/day globally and 24/day per user. These limits can deny
+legitimate traffic when shared capacity is exhausted; they are not a billing
+quota. Use Quick Tunnel only for trusted testing. To require email verification
+for a host-run tunnel, start
 `cloudflared tunnel --url http://127.0.0.1:8088 --allowed-mail you@example.com`
 instead of the Compose `cloudflared` service. Repeat `--allowed-mail` for each
 allowed address.
@@ -119,11 +123,20 @@ volume until the restore is verified.
   the app service to multiple containers.
 - Keep `.secrets/` and backup archives out of Git and image builds. Changing the
   session secret signs out all users.
+- The project requires Python 3.11 or newer and Pillow 13.0.0 or newer. Python
+  3.10 is unsupported because Pillow 13 dropped it and Pillow 12.3.0 has known
+  security advisories. The backend image uses Python 3.11 and Pillow 13.0.0.
 - Before rebuilding an existing deployment, retain the prior app image tag and
   a data backup. Recreate the container from the prior image tag for code
   rollback. SQLite schema changes may need a matching data restore.
 - Live OpenAI, self-hosted and LangSmith delivery checks require credentials
   and active endpoints; a healthy container does not prove those calls work.
+- A user can request 1–6 images per creation action. The browser sends separate
+  requests, each with its own provider and prompt-model cost. Reloading the
+  page stops later requests but leaves completed results in the library.
+- Deleting an image removes its live file and hides it from the image API.
+  SQLite retains a metadata tombstone for derived-image lineage. Older backup
+  archives may still contain files deleted after the backup was made.
 
 ## References
 

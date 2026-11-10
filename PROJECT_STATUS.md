@@ -1,13 +1,26 @@
 # Project Status
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 ## Current milestone
 
-MVP implemented; its offline suite, including Vietnamese prompt interpretation
-tests, passes. OpenAI credentials are configured in ignored `.env`; the backend
-was recreated to load them. Read-only model listing returned HTTP 200, but
-successful image generation still needs a browser retry.
+MVP implemented. Users can select 1–6 images per creation action and delete
+images from their library. Offline tests and the frontend build pass. The
+updated backend/frontend are running in the existing Compose stack; local and
+public health checks returned HTTP 200. Live image generation still needs a
+browser retry.
+
+Security audit fixes are implemented and verified offline in this worktree:
+explicit session secret, Secure cookie default, API no-store headers, persistent
+safety rate limits, bounded provider responses and Pillow 13 in the Python 3.11
+Trixie deployment image. Docker Scout found 27 residual runtime advisories,
+none high or critical. The running Compose stack has **not** been updated with these
+security changes. See [audit report](docs/security-audit-2026-11-10.md) and
+[ADR 0010](docs/adr/0010-security-guards.md).
+
+Python support is now `>=3.11`; the active lockfile requires Pillow 13.0.0+.
+Python 3.10 is rejected before dependency installation. See
+[ADR 0011](docs/adr/0011-drop-python-310-for-pillow-security.md).
 
 Active plan: [docs/implementation-plan.md](docs/implementation-plan.md).
 Active charter: [docs/project-charter.md](docs/project-charter.md).
@@ -39,6 +52,9 @@ planner completion counts carry forward.
 - Added server-side Vietnamese prompt interpretation for generation, editing and
   variations; the library retains the user's original text. See
   [ADR 0008](docs/adr/0008-vietnamese-prompt-interpretation.md).
+- Added a 1–6 image selector that makes separate requests, plus owner-scoped
+  deletion of image files and library entries. Derived image records keep their
+  source relationship; see [ADR 0009](docs/adr/0009-image-batch-and-deletion.md).
 - Built an arm64 Docker image and healthy single-host Compose container with a
   persistent SQLite/image volume and file-backed session secret. A stopped-app
   backup restored successfully into a separate verification volume; see
@@ -46,6 +62,9 @@ planner completion counts carry forward.
 - Split Compose into a one-shot SQLite schema initializer, FastAPI backend,
   Nginx frontend and optional Cloudflare Quick Tunnel service. The tunnel is
   running; its temporary public `/api/health` returned HTTP 200.
+- Audited source and dependencies; patched confirmed session, abuse, response
+  buffering, cache and account-timing risks. Raised the minimum Python version
+  to 3.11 so no supported environment resolves vulnerable Pillow 12.3.0.
 
 ## Implementation status
 
@@ -54,21 +73,25 @@ planner completion counts carry forward.
 | 1. Tài khoản, quyền sở hữu và lưu trữ bền vững | Hoàn thành | Auth, owner-isolation, file access và restart tests |
 | 2. Generation, edit, variation và provider errors | Hoàn thành offline | Fake-provider, adapter, unsupported capability, invalid/oversized image và storage-failure tests |
 | 2a. LangChain model routing và LangSmith tracing | Hoàn thành offline | 6 model-routing/trace tests; chưa xác nhận LangSmith remote |
-| 2b. Hiểu prompt tiếng Việt | Offline verified; live model còn chờ | 2 HTTP mock/API tests qua; latest source image chưa được deploy; verify `PROMPT_MODEL` before rebuild |
+| 2b. Hiểu prompt tiếng Việt | Offline verified; live model còn chờ | 2 HTTP mock/API tests qua; latest source image đã deploy nhưng chưa kiểm tra live prompt |
 | 3. Giao diện và production build | Hoàn thành offline | SPA/static tests; TypeScript + Vite build passed |
 | 4. Live OpenAI/self-hosted smoke tests | Đang chờ retry generation | Lần gần nhất 502 do container chưa nhận key; backend đã recreate; GET `/models` 200, model cấu hình có trong danh sách |
 | 5. Docker Compose local deployment | Hoàn thành | backend/frontend images, database init exit 0, both long-running services healthy, HTTP proxy, backup/restore |
 | 6. Cloudflare public tunnel | Quick Tunnel đang chạy; URL tạm thời | Cloudflare returned HTTP 200 for public `/api/health`; no named domain or Access policy |
+| 7. Chọn 1–6 ảnh và xóa ảnh | Đã deploy; live generation còn chờ | Offline API tests, frontend build, Compose health và public health qua |
+| 8. Security audit và vá lỗi | Hoàn thành offline; chưa deploy | 40 tests trên Python 3.11, dependency audit sạch, Python 3.10 bị từ chối, Docker Scout còn 27 cảnh báo mức trung bình/thấp |
 
 ## Now
 
-1. Retry image generation in the browser. If it passes, verify prompt
-   interpretation separately before deploying the latest source image.
-2. If a stable public hostname is needed, create a named Cloudflare Tunnel,
+1. Retry image generation in the browser, including a multi-image action.
+   Verify prompt interpretation and output separately from health checks.
+2. Review and roll out the security-patched images with a data backup; the
+   current public stack still runs the prior image.
+3. If a stable public hostname is needed, create a named Cloudflare Tunnel,
    configure its DNS routes and restrict access with Cloudflare Access.
-3. Verify `PROMPT_MODEL` against the configured API before rebuilding the latest
-   source image, then run separate OpenAI and self-hosted operation checks.
-4. Schedule off-host copies of the documented stopped-app backup before
+4. Verify `PROMPT_MODEL` against the configured API, then run separate OpenAI
+   and self-hosted operation checks.
+5. Schedule off-host copies of the documented stopped-app backup before
    storing production data.
 
 ## Next
@@ -92,7 +115,13 @@ is generated.
 
 ## Verification
 
-- Project Python: CPython 3.10.21 via uv; system `python3` is 3.9.6.
+- Current project Python: CPython 3.11.16 via uv; Pillow 13.0.0. System
+  `python3` is 3.9.6. The earlier Python 3.10.21 checks below are historical.
+- Python 3.10/Pillow follow-up: `uv run pytest -q` 40 passed on Python 3.11;
+  isort, Black, flake8, Ruff, Bandit, lock check, frontend build and isolated
+  Docker build passed. `pip-audit` found no known vulnerabilities in the locked
+  production dependencies. Explicit Python 3.10 selection failed before
+  installation, as required. The running Compose stack was not updated.
 - `uv sync --locked`: passed; 58 packages checked.
 - `uv lock --check`: passed; 66 packages resolved.
 - `uv run pytest tests/test_image_studio.py`: 15 passed.
@@ -128,3 +157,14 @@ is generated.
   listed. No image-generation request was retried.
 - Live image generation, prompt interpretation, LangSmith remote delivery and
   browser-driven E2E remain unverified.
+- Delete/count deployment (2026-11-09): focused `uv run pytest
+  tests/test_database.py tests/test_image_studio.py -q` passed (20 tests);
+  full `uv run pytest` passed (32 tests); isort, Black, flake8, Ruff and
+  `git diff --check` passed;
+  frontend `npm run build` passed. New backend and frontend images built and
+  healthy in the existing `visual-assistant` Compose project. Stopped-app
+  backup passed `gzip -t`; SQLite `PRAGMA integrity_check` returned `ok`, and
+  the new `deleted_at` column exists. Local `/api/health` and frontend returned
+  HTTP 200; unauthenticated DELETE returned 401. Public Quick Tunnel
+  `/api/health` returned HTTP 200. Live image creation and browser UI behavior
+  were not tested.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Protocol
 from urllib.parse import urlsplit
 
@@ -28,6 +29,8 @@ subject, action, relationship, style, composition, color, material, lighting,
 mood, and constraint. Do not invent or omit visual details. If the user asks for
 specific words in the image, preserve those words exactly in their original
 language and mark them as exact text. Return only the image prompt."""
+
+MAX_PROMPT_RESPONSE_BYTES = 128 * 1024
 
 
 class PromptEnhancer(Protocol):
@@ -75,9 +78,12 @@ class OpenAICompatiblePromptEnhancer:
             raise ImageProviderError(
                 "Prompt language model credentials are not configured."
             )
-        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        headers = {"Accept-Encoding": "identity"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         try:
-            response = self._client.post(
+            with self._client.stream(
+                "POST",
                 f"{self.base_url}/chat/completions",
                 json={
                     "model": self.model,
@@ -90,23 +96,35 @@ class OpenAICompatiblePromptEnhancer:
                     ],
                 },
                 headers=headers,
-            )
+            ) as response:
+                if not response.is_success:
+                    if response.status_code in {401, 403}:
+                        message = (
+                            "Prompt language model rejected its configured credentials."
+                        )
+                    elif response.status_code == 429:
+                        message = (
+                            "Prompt language model is rate limited. Try again later."
+                        )
+                    else:
+                        message = (
+                            "Prompt language model could not process this description."
+                        )
+                    raise ImageProviderError(message)
+                content = bytearray()
+                for chunk in response.iter_bytes(chunk_size=65536):
+                    if len(content) + len(chunk) > MAX_PROMPT_RESPONSE_BYTES:
+                        raise ImageProviderError(
+                            "Prompt language model response is too large."
+                        )
+                    content.extend(chunk)
         except httpx.TimeoutException as exc:
             raise ImageProviderError("Prompt language model timed out.") from exc
         except (httpx.HTTPError, httpx.InvalidURL) as exc:
             raise ImageProviderError("Prompt language model is unavailable.") from exc
 
-        if not response.is_success:
-            if response.status_code in {401, 403}:
-                message = "Prompt language model rejected its configured credentials."
-            elif response.status_code == 429:
-                message = "Prompt language model is rate limited. Try again later."
-            else:
-                message = "Prompt language model could not process this description."
-            raise ImageProviderError(message)
-
         try:
-            payload = response.json()
+            payload = json.loads(content)
             choices = payload["choices"]
             content = choices[0]["message"]["content"]
         except (IndexError, KeyError, TypeError, ValueError) as exc:

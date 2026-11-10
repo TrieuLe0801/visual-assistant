@@ -61,3 +61,12 @@ class LocalImageStorage:
             self.resolve(relative_path).unlink(missing_ok=True)
         except (OSError, ImageStorageError):
             pass
+
+    def delete(self, relative_path: str) -> None:
+        target = (self.root / relative_path).resolve()
+        if self.root not in target.parents:
+            raise ImageStorageError("Image storage path is invalid.")
+        try:
+            target.unlink(missing_ok=True)
+        except OSError as exc:
+            raise ImageStorageError("Image storage is unavailable.") from exc

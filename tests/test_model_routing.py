@@ -77,6 +77,7 @@ def test_langchain_routes_each_operation_to_server_selected_model() -> None:
 def test_catalog_selects_model_from_server_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("SESSION_SECRET", "test-session-secret-that-is-long-enough")
     monkeypatch.setenv(
         "IMAGE_MODEL_CATALOG",
         json.dumps(

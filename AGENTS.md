@@ -43,8 +43,8 @@ Before editing code or project decisions, read these files in order:
 - User A must never read or change user B's image or prompt.
 - Never put API keys, session secrets, passwords or provider credentials in the
   database, API response or logs.
-- Do not let users choose provider, model, image size, aspect ratio, count or
-  other generation parameters.
+- Let users choose 1–6 images per creation action. Do not let users choose
+  provider, model, image size, aspect ratio or other generation parameters.
 - Preserve the workflow outcomes defined in `docs/project-charter.md`.
 
 ### Working agreements
@@ -59,7 +59,7 @@ Before editing code or project decisions, read these files in order:
   Use `project-change-verification` for project checks and `project-deployment`
   for deployment work. See `docs/codex-workflow.md` for the portable file set
   and local setup.
-- Support Python `>=3.10`. Use `uv` for dependencies, environments and command
+- Support Python `>=3.11`. Use `uv` for dependencies, environments and command
   execution. Commit `uv.lock` after dependency changes.
 - Use `pytest`, isort, Black, flake8 and Ruff for Python checks. Use TypeScript
   build for frontend checks. Keep network/model calls out of unit tests.

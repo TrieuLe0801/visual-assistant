@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
 
 import httpx
 
@@ -13,6 +14,8 @@ from .provider import (
     ImageProviderError,
     UnsupportedImageOperation,
 )
+
+MAX_PROVIDER_RESPONSE_BYTES = 30 * 1024 * 1024
 
 
 class OpenAICompatibleProvider:
@@ -77,16 +80,17 @@ class OpenAICompatibleProvider:
 
     def _post_json(self, path: str, payload: dict[str, str]) -> dict[str, object]:
         try:
-            response = self._client.post(
+            with self._client.stream(
+                "POST",
                 f"{self.base_url}{path}",
                 json=payload,
                 headers=self._headers(),
-            )
+            ) as response:
+                return self._read_response(response)
         except httpx.TimeoutException as exc:
             raise ImageProviderError("Image provider timed out.") from exc
         except httpx.HTTPError as exc:
             raise ImageProviderError("Image provider is unavailable.") from exc
-        return self._read_response(response)
 
     def _post_edit(
         self, prompt: str, source: bytes, source_mime_type: str
@@ -97,26 +101,28 @@ class OpenAICompatibleProvider:
                 "The source image format is not supported for editing."
             )
         try:
-            response = self._client.post(
+            with self._client.stream(
+                "POST",
                 f"{self.base_url}/images/edits",
                 data={"model": self.model, "prompt": prompt, "output_format": "png"},
                 files={"image": (f"source.{extension}", source, source_mime_type)},
                 headers=self._headers(),
-            )
+            ) as response:
+                if response.status_code in {404, 405, 501}:
+                    raise UnsupportedImageOperation(
+                        "Configured image provider does not support image edits."
+                    )
+                return self._read_response(response)
         except httpx.TimeoutException as exc:
             raise ImageProviderError("Image provider timed out.") from exc
         except httpx.HTTPError as exc:
             raise ImageProviderError("Image provider is unavailable.") from exc
-        if response.status_code in {404, 405, 501}:
-            raise UnsupportedImageOperation(
-                "Configured image provider does not support image edits."
-            )
-        return self._read_response(response)
 
     def _headers(self) -> dict[str, str]:
+        headers = {"Accept-Encoding": "identity"}
         if self.api_key:
-            return {"Authorization": f"Bearer {self.api_key}"}
-        return {}
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     @staticmethod
     def _read_response(response: httpx.Response) -> dict[str, object]:
@@ -133,8 +139,13 @@ class OpenAICompatibleProvider:
             else:
                 message = "Image provider could not complete the request."
             raise ImageProviderError(message)
+        content = bytearray()
+        for chunk in response.iter_bytes(chunk_size=65536):
+            if len(content) + len(chunk) > MAX_PROVIDER_RESPONSE_BYTES:
+                raise ImageProviderError("Image provider response is too large.")
+            content.extend(chunk)
         try:
-            payload = response.json()
+            payload = json.loads(content)
         except ValueError as exc:
             raise ImageProviderError("Image provider returned invalid JSON.") from exc
         if not isinstance(payload, dict):

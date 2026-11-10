@@ -42,6 +42,7 @@ GET  /api/images
 GET  /api/images/{id}
 GET  /api/images/{id}/file
 POST /api/images/generate
+DELETE /api/images/{id}
 POST /api/images/{id}/edit
 POST /api/images/{id}/variations
 ```
@@ -120,9 +121,9 @@ OPENAI_API_KEY=
 OPENAI_BASE_URL=https://api.openai.com/v1
 IMAGE_API_BASE_URL=http://127.0.0.1:8001/v1
 IMAGE_API_KEY=
-SESSION_SECRET=development-only-change-this-session-secret
+SESSION_SECRET=<unique-random-secret-at-least-24-bytes>
 SESSION_TTL_SECONDS=1209600
-SESSION_COOKIE_SECURE=false
+SESSION_COOKIE_SECURE=true
 IMAGE_DATABASE_PATH=var/image-studio.db
 IMAGE_STORAGE_PATH=var/images
 IMAGE_PROVIDER_TIMEOUT_SECONDS=180
@@ -132,8 +133,9 @@ FRONTEND_DIST_PATH=frontend/dist
 Với `IMAGE_PROVIDER=openai`, app dùng API chính thức và `OPENAI_API_KEY`.
 `OPENAI_BASE_URL` cho phép override endpoint. Với
 `IMAGE_PROVIDER=openai_compatible`, app dùng `IMAGE_MODEL`,
-`IMAGE_API_BASE_URL` và optional `IMAGE_API_KEY`. Đổi `SESSION_SECRET` trước
-khi deploy ngoài môi trường phát triển. Prompt model chỉ dùng lại
+`IMAGE_API_BASE_URL` và optional `IMAGE_API_KEY`. Cần đặt `SESSION_SECRET`
+duy nhất trước khi chạy backend; dùng `SESSION_COOKIE_SECURE=false` chỉ với
+local HTTP. Prompt model chỉ dùng lại
 `OPENAI_API_KEY` khi endpoint prompt trùng `OPENAI_BASE_URL`; endpoint riêng
 dùng `PROMPT_API_KEY`. Danh sách active nằm trong `.env.example`.
 
@@ -141,7 +143,7 @@ dùng `PROMPT_API_KEY`. Danh sách active nằm trong `.env.example`.
 
 ```bash
 uv sync
-uv run uvicorn image_studio.app:app --reload --app-dir src
+uv run uvicorn image_studio.app:create_app --factory --reload --app-dir src
 ```
 
 Trong terminal khác:

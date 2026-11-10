@@ -22,7 +22,7 @@
   <header>
     <div class="label">Yêu cầu mới · 08/11/2026</div>
     <h1>Studio ảnh AI</h1>
-    <p>Tạo ảnh từ prompt, chỉnh sửa ảnh đã lưu, tạo biến thể và lưu lịch sử trong
+    <p>Tạo 1–6 ảnh từ prompt, chỉnh sửa hoặc xóa ảnh đã lưu, tạo biến thể và lưu lịch sử trong
       thư viện riêng. FastAPI + React/TypeScript; SQLite và local volume.</p>
     <p><strong>Trạng thái:</strong> <span class="status">Offline checks passed; live providers pending</span></p>
     <p><a href="project-charter.md">Product charter</a> ·
@@ -40,7 +40,7 @@
       <li><strong>Model routing:</strong> LangChain Core chọn alias phía server; LangSmith ghi trace metadata khi bật.</li>
       <li><strong>Ownership:</strong> mọi ảnh và file chỉ truy cập bởi chủ sở hữu.</li>
     </ul>
-    <p>Người dùng không chọn provider, model hoặc thông số sinh ảnh. App không
+    <p>Người dùng chỉ chọn số lượng 1–6; không chọn provider, model hoặc thông số sinh ảnh khác. App không
       báo thành công nếu provider hoặc lưu file thất bại.</p>
   </section>
   <section>
@@ -55,8 +55,8 @@
   </section>
   <section>
     <h2>3. Giao diện và kiểm chứng — <span class="status">Hoàn thành offline</span></h2>
-    <p>TypeScript/Vite build, SPA serving, owner isolation, provider/storage failure
-      và dữ liệu sau restart đều được kiểm tra.</p>
+    <p>TypeScript/Vite build, SPA serving, owner isolation, provider/storage failure,
+      xóa ảnh và dữ liệu sau restart đều được kiểm tra. Giao diện cho chọn 1–6 ảnh.</p>
   </section>
   <section>
     <h2>4. Docker Compose và Cloudflare Tunnel — <span class="status">Quick Tunnel live; temporary URL</span></h2>
@@ -70,6 +70,7 @@
     <p><a href="adr/0005-ai-image-studio.md">ADR 0005</a> ·
       <a href="adr/0006-langchain-model-routing-langsmith-tracing.md">ADR 0006</a> ·
       <a href="adr/0007-single-host-compose-cloudflare.md">ADR 0007</a> ·
+      <a href="adr/0009-image-batch-and-deletion.md">ADR 0009</a> ·
       <a href="archive/2026-10-14/README.md">Travel planner snapshots</a></p>
   </footer>
 </main>

@@ -6,7 +6,8 @@ Webapp tạo ảnh từ prompt, chỉnh ảnh đã lưu và tạo biến thể. 
 ## MVP
 
 - Đăng ký/đăng nhập bằng email và mật khẩu.
-- Tạo ảnh mới, chỉnh sửa ảnh, tạo biến thể và mở lịch sử ảnh dẫn xuất.
+- Tạo 1–6 ảnh từ một prompt, chỉnh sửa ảnh, tạo biến thể, xóa ảnh và mở lịch
+  sử ảnh dẫn xuất.
 - SQLite lưu tài khoản và metadata; local volume lưu tệp ảnh.
 - FastAPI backend và React + TypeScript frontend.
 - OpenAI API hoặc endpoint OpenAI-compatible tự host, cấu hình ở server.
@@ -79,7 +80,7 @@ Chi tiết biến môi trường: [.env.example](.env.example).
 
 ## Chạy local
 
-Yêu cầu Python `>=3.10`, `uv`, Node.js và npm. Cài dependencies Python:
+Yêu cầu Python `>=3.11`, `uv`, Node.js và npm. Cài dependencies Python:
 
 ```bash
 uv sync
@@ -88,8 +89,12 @@ uv sync
 Terminal 1 — backend:
 
 ```bash
-uv run uvicorn image_studio.app:app --reload --app-dir src
+uv run uvicorn image_studio.app:create_app --factory --reload --app-dir src
 ```
+
+Set a unique `SESSION_SECRET` in an ignored `.env` before starting the backend.
+For local HTTP only, also set `SESSION_COOKIE_SECURE=false`. Docker Compose uses
+its existing `.secrets/session_secret` file and Secure cookies.
 
 Terminal 2 — frontend:
 
