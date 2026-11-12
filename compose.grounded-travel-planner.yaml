@@ -1,0 +1,25 @@
+# Optional overlay for a remotely-managed Cloudflare Tunnel that also routes
+# traffic to the Grounded Travel Planner Compose stack.
+services:
+  cloudflared:
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token-file
+      - /run/secrets/cloudflare_tunnel_token
+    networks:
+      - default
+      - travel_planner_ingress
+    secrets:
+      - cloudflare_tunnel_token
+
+secrets:
+  cloudflare_tunnel_token:
+    file: ./.secrets/cloudflare_tunnel_token
+
+networks:
+  default: {}
+  travel_planner_ingress:
+    external: true
+    name: grounded-travel-planner_public-ingress

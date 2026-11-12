@@ -71,6 +71,19 @@ the frontend TypeScript/Vite build and backend SPA tests passed.
 SQLite plus a local volume serves a single host. Backup/restore and multi-host
 coordination are not implemented. Provider calls are synchronous.
 
+## Shared Cloudflare Tunnel ingress — 2026-11-12
+
+- Added an optional Compose overlay for the existing remotely-managed
+  `cloudflared` connector to reach the Grounded Travel Planner app over its
+  external Docker ingress network. The default Quick Tunnel deployment remains
+  available without that network or a tunnel token.
+- Documented the external-network prerequisite, local token-file secret,
+  Cloudflare origin route, and Compose commands. No tunnel token or account
+  credential is stored in the repository.
+- `docker compose ... --profile publish config --quiet` passed with the overlay;
+  the external ingress network exists on the Docker host. No containers were
+  restarted by this configuration check.
+
 ## Codex workflow refresh — 2026-11-08
 
 - Set the project coordinator, manager, and planner to `gpt-6-sol`; set coding,

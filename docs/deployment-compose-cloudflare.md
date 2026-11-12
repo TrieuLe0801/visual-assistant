@@ -68,6 +68,30 @@ for a host-run tunnel, start
 instead of the Compose `cloudflared` service. Repeat `--allowed-mail` for each
 allowed address.
 
+## Route a named tunnel to the Grounded Travel Planner stack
+
+Use the optional `compose.grounded-travel-planner.yaml` overlay when the
+remotely-managed Cloudflare Tunnel must route to both this app and the
+Grounded Travel Planner app on the same Docker host. The planner Compose stack
+creates the external `grounded-travel-planner_public-ingress` network, so start
+that stack first. Keep the named tunnel token in the ignored
+`.secrets/cloudflare_tunnel_token` file; never commit the token.
+
+Configure the named tunnel's public hostname route in Cloudflare to use
+`http://app:8000` for the planner. Then validate and start the connector with
+the overlay:
+
+```bash
+docker compose -f compose.yaml -f compose.grounded-travel-planner.yaml --profile publish config --quiet
+docker compose -f compose.yaml -f compose.grounded-travel-planner.yaml --profile publish up -d cloudflared
+docker compose -f compose.yaml -f compose.grounded-travel-planner.yaml --profile publish logs --tail=50 cloudflared
+```
+
+This uses the existing `cloudflared` service and named tunnel. The default
+Compose file still runs a Quick Tunnel and does not require the planner network
+or a tunnel token. To return to the default Quick Tunnel, recreate the service
+without the overlay.
+
 For stable custom domains, create a remotely-managed named tunnel in Cloudflare,
 add one published application route per hostname, and add a Cloudflare Access
 policy before sharing the URLs. Store its tunnel token as a Compose secret; do
