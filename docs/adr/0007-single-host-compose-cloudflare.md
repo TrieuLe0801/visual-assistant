@@ -3,7 +3,8 @@
 Date: 2026-11-08
 Status: Accepted
 Extends: ADR 0005
-Amended: Replaced ngrok publish service with Cloudflare Quick Tunnel on 2026-11-09.
+Amended: Replaced ngrok publish service with Cloudflare Quick Tunnel on 2026-11-09;
+added an optional named-tunnel overlay for the Grounded Travel Planner ingress on 2026-11-12.
 
 ## Context
 
@@ -26,6 +27,11 @@ database and one image volume. No production hosting provider is selected.
 - Treat the Quick Tunnel URL as temporary. It can change after restart and has
   no uptime guarantee. Use a remotely-managed named tunnel and Cloudflare Access
   before sharing a stable custom domain.
+- Keep the default Quick Tunnel deployment self-contained. For the shared-host
+  Grounded Travel Planner deployment, provide an optional Compose overlay that
+  runs the existing connector as a remotely-managed named tunnel and attaches it
+  to the planner's external ingress network. Keep its tunnel token in a local
+  Compose secret file.
 - Store SQLite and image files together in a named Docker volume. Stop the app
   before a paired backup of the whole volume. Restore into a new volume before
   switching the app to it.
@@ -55,6 +61,8 @@ database and one image volume. No production hosting provider is selected.
   can reach registration and login. App data remains owner-scoped, but signup
   limits and generation quotas are not implemented. Use only for trusted tests.
 - A Quick Tunnel URL is not suitable for a stable domain or production entrypoint.
+- The named-tunnel overlay requires the Grounded Travel Planner Compose stack to
+  create its external ingress network before the connector starts.
 - A healthy container does not prove live image-provider or LangSmith calls.
 - The named volume and `.secrets/` directory require separate operating and
   backup practices. Changing the session secret invalidates sessions.
