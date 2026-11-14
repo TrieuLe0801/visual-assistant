@@ -7,7 +7,7 @@ Python 3.10 compatibility decision superseded by ADR 0011.
 
 ## Context
 
-The Compose application can be reached through a public Quick Tunnel. Account
+The Compose application can be reached through a public Cloudflare Tunnel. Account
 creation and image generation can consume host and provider resources. The
 previous session-secret fallback was predictable outside Compose, and Pillow
 12.3.0 has published security advisories.
@@ -22,6 +22,9 @@ previous session-secret fallback was predictable outside Compose, and Pillow
 - Persist atomic fixed-window safety limits in SQLite for registration, login
   and image operations. Use global and per-email/per-user keys. Hash normalized
   emails before storing rate-limit keys. Return HTTP 429 with `Retry-After`.
+- Temporarily disable new registrations by default with `REGISTRATION_ENABLED=false`.
+  Keep the registration API gated and expose a non-secret status for the UI so
+  only existing accounts can sign in while the pause is active.
 - Return `Cache-Control: no-store` and defensive headers on all `/api/`
   responses. Apply the same password verification work to unknown accounts.
 - Stream and cap provider JSON responses before parsing them: 30 MiB for image

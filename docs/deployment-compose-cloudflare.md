@@ -1,11 +1,12 @@
 # Local Docker Compose deployment with Cloudflare Tunnel
 
-Date: 2026-11-09
-Target: one Docker Desktop host, with an optional Cloudflare Quick Tunnel.
+Date: 2026-11-14
+Target: one Docker Desktop host, published at `aliter.app` through a named Cloudflare Tunnel.
 
 ## Prepare
 
-1. Start Docker Desktop. Quick Tunnel needs no Cloudflare token or domain.
+1. Start Docker Desktop. Confirm the existing external Docker network
+   `grounded-travel-planner_public-ingress` is available to Compose.
 2. Run `python3 scripts/init-deployment-secrets.py`. It creates
    `.secrets/session_secret` with mode `0600` and never replaces an existing
    file. The path is Git and Docker ignored.
@@ -15,9 +16,15 @@ Target: one Docker Desktop host, with an optional Cloudflare Quick Tunnel.
    `PROMPT_MODEL`, `PROMPT_API_BASE_URL` and `PROMPT_API_KEY`; if the latter is
    blank and its endpoint matches `OPENAI_BASE_URL`, it falls back to
    `OPENAI_API_KEY`. A separate endpoint uses its own optional key.
+   `REGISTRATION_ENABLED` defaults to `false`; only existing accounts can sign
+   in. Set it to `true` only when new account creation should reopen.
 4. For a self-hosted provider running on the Mac, use a base URL reachable from
    the container, such as `http://host.docker.internal:8001/v1` on Docker
    Desktop, rather than `127.0.0.1` inside the container.
+5. Keep the named tunnel connector token in the ignored
+   `.secrets/cloudflare_tunnel_token` file. Configure the `aliter.app` public
+   hostname route in Cloudflare to `http://frontend:80`. Do not print the token
+   or put it in `.env` or tracked files.
 
 Compose reads provider variables when it creates the backend container. After
 changing `.env`, apply the new values with
@@ -41,38 +48,29 @@ SQLite and image files share the named `visual_assistant_image_data` volume at
 `/data`. The app reads its session secret from a Compose secret. Cookies are
 marked Secure because public traffic uses HTTPS.
 
-## Publish with Quick Tunnel
+## Publish with named Cloudflare Tunnel
 
-Start the `publish` profile after the frontend is healthy:
+Start the `publish` profile after the frontend is healthy and the tunnel token
+file and Cloudflare hostname route are configured:
 
 ```bash
+docker compose --profile publish config --quiet
 docker compose --profile publish up -d cloudflared
 docker compose --profile publish ps
-docker compose --profile publish logs --tail=50 cloudflared
+curl -fsS https://aliter.app/api/health
 ```
 
-The `cloudflared` container forwards to `frontend:80` over the private Compose
-network. Copy the temporary `https://….trycloudflare.com` URL from its logs.
-Quick Tunnel URLs change when the tunnel process restarts. Stop publishing with
-`docker compose --profile publish stop cloudflared`.
+Compose mounts the connector token as a secret. Cloudflare routes `aliter.app`
+through this named tunnel to `frontend:80` on the Compose network. Keep the
+`cloudflared` container running while the domain serves the app. Stop publishing
+with `docker compose --profile publish stop cloudflared`.
 
-Quick Tunnel has no Cloudflare Access policy by default. Anyone with the URL can
-reach the app's registration and login screens. The app scopes image data by
-owner and applies persistent safety rate limits: 12 registrations/hour globally,
-3/hour per email, 300 logins/15 minutes globally, 20/15 minutes per email,
-120 image operations/day globally and 24/day per user. These limits can deny
-legitimate traffic when shared capacity is exhausted; they are not a billing
-quota. Use Quick Tunnel only for trusted testing. To require email verification
-for a host-run tunnel, start
-`cloudflared tunnel --url http://127.0.0.1:8088 --allowed-mail you@example.com`
-instead of the Compose `cloudflared` service. Repeat `--allowed-mail` for each
-allowed address.
-
-For stable custom domains, create a remotely-managed named tunnel in Cloudflare,
-add one published application route per hostname, and add a Cloudflare Access
-policy before sharing the URLs. Store its tunnel token as a Compose secret; do
-not put it in source or expose it to the app. This repository currently
-configures Quick Tunnel only.
+The domain reaches the login screen unless a separate Cloudflare Access policy
+restricts it. Registration is disabled in the UI and API by default. The app
+scopes image data by owner and applies persistent safety rate limits for login
+and image operations. These limits can deny legitimate traffic when shared
+capacity is exhausted; they are not a billing quota. Verify the intended
+Cloudflare Access policy before sharing the domain more widely.
 
 ## Backup and restore
 
@@ -114,9 +112,8 @@ volume until the restore is verified.
 
 ## Limits and recovery
 
-- The Docker host and `cloudflared` container must stay online for the URL to
-  work. Quick Tunnel has no uptime guarantee, allows up to 200 in-flight
-  requests and does not support Server-Sent Events.
+- The Docker host, `cloudflared` container, DNS route and Cloudflare hostname
+  configuration must remain available for `aliter.app` to work.
 - SQLite is embedded in the backend process. The `database` container only
   initializes its schema; it is not a long-running database server. One app
   host and one writable SQLite/image volume remain supported. Do not scale
@@ -140,6 +137,5 @@ volume until the restore is verified.
 
 ## References
 
-- [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
 - [Cloudflare Tunnel setup](https://developers.cloudflare.com/tunnel/get-started/)
 - [Cloudflare Access for public applications](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/)
