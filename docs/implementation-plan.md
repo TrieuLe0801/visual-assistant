@@ -1,6 +1,6 @@
 # Studio ảnh AI — Kế hoạch triển khai
 
-Ngày cập nhật: 2026-11-09
+Ngày cập nhật: 2026-11-10
 Trạng thái: MVP implementation plan
 
 ## Kiến trúc
@@ -113,6 +113,7 @@ kết quả live provider test hoặc trạng thái chưa chạy.
 ```dotenv
 IMAGE_PROVIDER=openai
 IMAGE_MODEL=gpt-image-2.5-sunburst
+REGISTRATION_ENABLED=false
 PROMPT_MODEL=gpt-6-luna
 PROMPT_API_BASE_URL=https://api.openai.com/v1
 PROMPT_API_KEY=
@@ -129,6 +130,10 @@ IMAGE_STORAGE_PATH=var/images
 IMAGE_PROVIDER_TIMEOUT_SECONDS=180
 FRONTEND_DIST_PATH=frontend/dist
 ```
+
+`REGISTRATION_ENABLED=false` hides account creation and rejects registration
+requests. Existing accounts can still sign in. Set it to `true` to reopen
+registration.
 
 Với `IMAGE_PROVIDER=openai`, app dùng API chính thức và `OPENAI_API_KEY`.
 `OPENAI_BASE_URL` cho phép override endpoint. Với

@@ -17,6 +17,7 @@ type View = "library" | "create" | "detail";
 const errorMessages: Record<string, string> = {
   "An account with this email already exists.": "Email này đã có tài khoản. Hãy đăng nhập.",
   "Email or password is incorrect.": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+  "Registration is temporarily disabled.": "Đăng ký tài khoản hiện đang tạm khóa.",
   "Enter a valid email address.": "Vui lòng nhập địa chỉ email hợp lệ.",
   "Password must contain between 10 and 128 characters.": "Mật khẩu cần từ 10 đến 128 ký tự.",
   "Image provider credentials are not configured.": "Hệ thống tạo ảnh chưa được cấu hình. Vui lòng liên hệ quản trị viên.",
@@ -77,6 +78,7 @@ function formatDate(value: string): string {
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(false);
   const [images, setImages] = useState<ImageRecord[]>([]);
   const [view, setView] = useState<View>("library");
   const [selectedId, setSelectedId] = useState<ImageRecord["id"] | null>(null);
@@ -130,6 +132,9 @@ function App() {
   }, []);
 
   useEffect(() => {
+    request<{ enabled: boolean }>("/api/auth/registration-status")
+      .then((result) => setRegistrationEnabled(result.enabled))
+      .catch(() => setRegistrationEnabled(false));
     request<User | { user: User }>("/api/auth/me")
       .then((result) => setUser("user" in result ? result.user : result))
       .catch(() => setUser(null))
@@ -318,10 +323,10 @@ function App() {
             <h1>{authMode === "login" ? "Chào mừng trở lại." : "Bắt đầu sáng tạo."}</h1>
             <p>Biến ý tưởng thành hình ảnh. Mỗi tác phẩm và prompt được lưu trong thư viện riêng của bạn.</p>
           </div>
-          <div className="auth-tabs" role="group" aria-label="Chọn hình thức tài khoản">
+          {registrationEnabled && <div className="auth-tabs" role="group" aria-label="Chọn hình thức tài khoản">
             <button type="button" className={authMode === "login" ? "active" : ""} onClick={() => { setAuthMode("login"); setError(""); }} aria-pressed={authMode === "login"}>Đăng nhập</button>
             <button type="button" className={authMode === "register" ? "active" : ""} onClick={() => { setAuthMode("register"); setError(""); }} aria-pressed={authMode === "register"}>Tạo tài khoản</button>
-          </div>
+          </div>}
           <form className="auth-form" onSubmit={authenticate}>
             <label>Email<input autoComplete="email" name="email" type="email" placeholder="ban@email.com" required maxLength={254} /></label>
             <label>Mật khẩu<input autoComplete={authMode === "login" ? "current-password" : "new-password"} name="password" type="password" placeholder="Tối thiểu 10 ký tự" required minLength={10} maxLength={128} /></label>

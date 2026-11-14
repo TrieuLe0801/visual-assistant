@@ -3,8 +3,7 @@
 Date: 2026-11-08
 Status: Accepted
 Extends: ADR 0005
-Amended: Replaced ngrok publish service with Cloudflare Quick Tunnel on 2026-11-09;
-added an optional named-tunnel overlay for the Grounded Travel Planner ingress on 2026-11-12.
+Amended: Named Cloudflare Tunnel for `aliter.app` on 2026-11-14.
 
 ## Context
 
@@ -22,16 +21,15 @@ database and one image volume. No production hosting provider is selected.
 - Add a one-shot `database` service to initialize the SQLite schema before the
   backend starts. SQLite remains embedded, not a network service.
 - Run `cloudflared` as a separate Compose service under the optional `publish`
-  profile. Use Cloudflare Quick Tunnel and forward to `frontend:80` on the
-  private Compose network. Quick Tunnel needs no account token or custom domain.
-- Treat the Quick Tunnel URL as temporary. It can change after restart and has
-  no uptime guarantee. Use a remotely-managed named tunnel and Cloudflare Access
-  before sharing a stable custom domain.
-- Keep the default Quick Tunnel deployment self-contained. For the shared-host
-  Grounded Travel Planner deployment, provide an optional Compose overlay that
-  runs the existing connector as a remotely-managed named tunnel and attaches it
-  to the planner's external ingress network. Keep its tunnel token in a local
-  Compose secret file.
+  profile. Use a named Cloudflare Tunnel with a file-backed connector token.
+  Route `aliter.app` to `frontend:80` on the Compose network.
+- Keep the connector token in an ignored secret file. Configure any Cloudflare
+  Access policy separately from the tunnel route.
+- Attach the connector to the planner's external ingress network as well as
+  this app's default network so the named tunnel can serve both projects. The
+  planner stack creates that external network. Retain the overlay file used by
+  the planner's deployment runbook; the main Compose file already has the same
+  connector settings.
 - Store SQLite and image files together in a named Docker volume. Stop the app
   before a paired backup of the whole volume. Restore into a new volume before
   switching the app to it.
@@ -44,6 +42,8 @@ database and one image volume. No production hosting provider is selected.
 
 - Keep ngrok: rejected because its configured endpoint was already online and
   publishing failed with `ERR_NGROK_334`.
+- Keep a temporary public tunnel: rejected after the stable domain and named
+  tunnel were configured.
 - Bind the app to all host interfaces: rejected because the tunnel can use the
   private Compose network.
 - Run multiple app replicas: rejected because SQLite and the local image volume
@@ -55,14 +55,15 @@ database and one image volume. No production hosting provider is selected.
 
 ## Consequences
 
-- The Docker host and `cloudflared` container must stay online for the temporary
-  public URL to work.
-- Quick Tunnel has no Cloudflare Access policy by default. Anyone with the URL
-  can reach registration and login. App data remains owner-scoped, but signup
-  limits and generation quotas are not implemented. Use only for trusted tests.
-- A Quick Tunnel URL is not suitable for a stable domain or production entrypoint.
-- The named-tunnel overlay requires the Grounded Travel Planner Compose stack to
-  create its external ingress network before the connector starts.
+- The Docker host and `cloudflared` container must stay online for `aliter.app`
+  to work. The hostname route and DNS configuration must remain valid.
+- A named tunnel does not itself enforce Cloudflare Access. Anyone who can
+  reach the domain can reach login unless a separate Access policy restricts
+  it; application registration is disabled by default. App data remains
+  owner-scoped, with safety request limits but no billing quota.
+- The planner stack must create its external ingress network before the
+  connector starts. The overlay remains a compatible invocation path for the
+  planner's deployment runbook; it does not select a different tunnel mode.
 - A healthy container does not prove live image-provider or LangSmith calls.
 - The named volume and `.secrets/` directory require separate operating and
   backup practices. Changing the session secret invalidates sessions.
@@ -70,12 +71,11 @@ database and one image volume. No production hosting provider is selected.
 ## Review triggers
 
 - The app moves to a managed host or multiple instances.
-- A stable custom domain, Cloudflare Access policy or public signup is required.
+- The domain route, Cloudflare Access policy or public signup changes.
 - Storage needs automatic scheduled backups or recovery objectives.
 
 ## References
 
 - [Docker Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets)
 - [uv in Docker](https://docs.astral.sh/uv/guides/integration/docker/)
-- [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
 - [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/)

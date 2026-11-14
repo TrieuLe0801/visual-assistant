@@ -24,7 +24,7 @@
     <h1>Studio ảnh AI</h1>
     <p>Tạo 1–6 ảnh từ prompt, chỉnh sửa hoặc xóa ảnh đã lưu, tạo biến thể và lưu lịch sử trong
       thư viện riêng. FastAPI + React/TypeScript; SQLite và local volume.</p>
-    <p><strong>Trạng thái:</strong> <span class="status">Offline checks passed; live providers pending</span></p>
+    <p><strong>Trạng thái:</strong> <span class="status">39 tests passed, 1 environment-dependent failure; live providers pending</span></p>
     <p><a href="project-charter.md">Product charter</a> ·
       <a href="implementation-plan.md">Implementation plan</a> ·
       <a href="../PROJECT_STATUS.md">Project status</a> ·
@@ -59,10 +59,10 @@
       xóa ảnh và dữ liệu sau restart đều được kiểm tra. Giao diện cho chọn 1–6 ảnh.</p>
   </section>
   <section>
-    <h2>4. Docker Compose và Cloudflare Tunnel — <span class="status">Quick Tunnel live; temporary URL</span></h2>
+    <h2>4. Docker Compose và Cloudflare Tunnel — <span class="status">Named tunnel live on aliter.app</span></h2>
     <p>Backend và frontend có image riêng; SQLite initializer thoát 0; hai
-      service chạy dài hạn healthy. Cloudflare Quick Tunnel đã publish URL tạm thời;
-      endpoint public <code>/api/health</code> trả HTTP 200.</p>
+      service chạy dài hạn healthy. Named Cloudflare Tunnel dùng token file;
+      <code>https://aliter.app/api/health</code> trả HTTP 200 ngày 14/11/2026.</p>
   </section>
   <footer>
     <p>Markdown và progress JSON là trạng thái có thẩm quyền. Live provider checks

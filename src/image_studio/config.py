@@ -42,6 +42,7 @@ class Settings:
     session_ttl_seconds: int
     provider_timeout_seconds: float
     frontend_dist_path: Path
+    registration_enabled: bool = False
     prompt_model: PromptModelSettings = field(default_factory=PromptModelSettings)
     model_catalog: tuple[ImageModelProfile, ...] = ()
     active_model: str = "default"
@@ -84,6 +85,10 @@ class Settings:
                 os.getenv("IMAGE_PROVIDER_TIMEOUT_SECONDS", "180")
             ),
             frontend_dist_path=Path(os.getenv("FRONTEND_DIST_PATH", "frontend/dist")),
+            registration_enabled=os.getenv("REGISTRATION_ENABLED", "false")
+            .strip()
+            .lower()
+            in {"1", "true", "yes"},
             prompt_model=PromptModelSettings(
                 model_name=os.getenv("PROMPT_MODEL", "gpt-6-luna").strip(),
                 api_base_url=prompt_base_url,
@@ -193,6 +198,7 @@ def make_settings(
         "session_cookie_secure": False,
         "session_ttl_seconds": 3600,
         "provider_timeout_seconds": 5.0,
+        "registration_enabled": True,
         "model_catalog": (),
         "active_model": "default",
     }

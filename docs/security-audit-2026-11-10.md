@@ -46,8 +46,9 @@ remains historical evidence, not an active supported dependency path.
   [Pillow 13 release notes](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html),
   [Pillow support matrix](https://pillow.readthedocs.io/en/stable/installation/python-support.html).
 - Fixed global windows can be exhausted deliberately, causing temporary 429s
-  for legitimate users. Quick Tunnel has no Access policy. A trusted edge and
-  account admission controls are still needed before broad public use.
+  for legitimate users. No Access policy was verified during this audit. A
+  trusted edge and account admission controls are still needed before broad
+  public use.
 - Docker Scout still reports 27 findings in the final arm64 runtime image:
   0 critical, 0 high, 1 medium and 26 low. The medium finding is in Debian
   `tar` (CVE-2025-45582), with no fixed package in the scanner report; the app

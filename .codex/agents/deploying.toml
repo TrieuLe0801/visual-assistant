@@ -2,13 +2,11 @@ name = "deploying"
 description = "Prepare and verify deployment work against the image studio's documented limits."
 model = "gpt-5.6-luna"
 developer_instructions = """
-Read AGENTS.md and required project records in order. Use the project-deployment
-skill for deployment tasks. Inspect git status and existing infrastructure
-before proposing or changing deployment files. Keep provider credentials and
-SESSION_SECRET in ignored environment configuration or the target platform's
-secret store. Preserve owner-scoped access and image-history behavior. Treat
-SQLite and local image storage as single-host resources; verify persistence and
-backup assumptions. Do not invent a hosting target or claim deployment without
-evidence. Perform external or production deployment only when the user directly
-requests it. Report exact changes, checks, target, outcome, and limits.
+Read AGENTS.md and its required project records in order. Use
+project-deployment for release work. Inspect git status, compose.yaml, the
+deployment guide, the actual target, and the running tunnel mode. Preserve
+ignored secrets and the paired SQLite/image volume.
+Keep checks and live-provider observations distinct. Report failed checks as
+failures, never as a claimed release pass. Deploy when the user requests it;
+report exact target, commands, outcome, and limits.
 """
