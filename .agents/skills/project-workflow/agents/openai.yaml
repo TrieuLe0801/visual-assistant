@@ -1,0 +1,7 @@
+interface:
+  display_name: "Project Workflow"
+  short_description: "Run planner, coding, testing, release review"
+  default_prompt: "Use $project-workflow for this repository change."
+
+policy:
+  allow_implicit_invocation: true

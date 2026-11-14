@@ -51,10 +51,23 @@ Before editing code or project decisions, read these files in order:
 
 - The primary Codex session uses `gpt-6-sol` to coordinate project work.
   The project keeps `planner` on `gpt-6-sol` and `coding`, `testing` and
-  `deploying` on `gpt-5.6-luna`. Assign bounded work when specialist roles
-  improve the result. Coordinate shared-file edits.
+  `deploying` on `gpt-5.6-luna`. Assign bounded ownership and coordinate
+  shared-file edits.
 - These Codex development agents are separate from the app's runtime. See
   `docs/adr/0001-python-development-tooling.md`.
+- For every requested repository change, use `.agents/skills/project-workflow/`
+  and run `planner`, `coding`, `testing`, then `deploying` in sequence. This
+  includes feature, bug-fix, refactor, configuration and documentation work;
+  pure questions and status requests are exempt.
+- `planner` must define a structured goal, acceptance criteria, file scope,
+  checks and risks before `coding` edits. `coding` must report its goal and map
+  each planned criterion to achieved, partial or blocked. `testing` must
+  compare the artifact with both goals and report exact failures. `deploying`
+  must review release readiness with `project-deployment`; it may not deploy
+  without an explicit user request.
+- The primary session owns these handoffs, shared-file coordination and any
+  bounded correction loop. Do not claim completion until durable artifacts and
+  verification evidence exist.
 - Use `project-deployment` for release work. The standard project checks below
   govern code and tooling changes. See `docs/codex-workflow.md` for the
   portable file set and local setup.

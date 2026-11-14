@@ -7,11 +7,19 @@ This repository keeps its Codex development workflow in Git:
 | `AGENTS.md` | Project rules and required reading |
 | `.codex/config.toml` | Coordinator model and agent concurrency |
 | `.codex/agents/*.toml` | Planner, coding, testing, and deployment roles with model assignments |
+| `.agents/skills/project-workflow/` | Required planner, coding, testing, and release-readiness flow for repository changes |
 | `.agents/skills/project-deployment/` | Release-specific checks for this single-host image studio |
 | `.codex/hooks.json`, `.codex/hooks/format_python.py` | Python edit hook |
 | `pyproject.toml`, `uv.lock` | Development tools and locked dependencies |
 
 The primary session coordinates work; no separate manager agent is needed.
+For every repository change, `AGENTS.md` requires the `project-workflow` skill.
+The primary session assigns the four roles in order: planner defines the goal
+and acceptance criteria; coding implements and reports against them; testing
+checks both the planned goal and coding result against the actual artifact;
+deploying reviews release readiness using `project-deployment`. Deployment
+itself occurs only when the user requests it. Pure questions do not start this
+workflow.
 Development agents are separate from the app's image-provider adapters. The
 coordinator and planner use `gpt-6-sol`. Coding, testing, and deployment use
 `gpt-5.6-luna`. `AGENTS.md` holds the verification sequence and evidence rules;
@@ -31,7 +39,7 @@ reference](https://developers.openai.com/codex/config-reference/) and
    local Codex model catalog.
 3. Set up credentials in ignored local environment files. Do not transfer
    `.env`, personal Codex config, plugin cache, or credentials through Git.
-4. Check that Codex discovers the four agents and one repository skill. Run
+4. Check that Codex discovers the four agents and two repository skills. Run
    the verification commands in `AGENTS.md`.
 
 Personal skills in `~/.agents/skills/` or `~/.codex/skills/`, including

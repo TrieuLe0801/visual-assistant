@@ -94,3 +94,17 @@ documented in `docs/codex-workflow.md`; verification rules already live in
 `AGENTS.md`. Retain the release-specific `project-deployment` skill. Test
 failures must be diagnosed and reported, not hidden by changing assertions or
 hardcoding application behavior.
+
+## Required project-change workflow amendment — 2026-11-14
+
+Use the repository `project-workflow` skill for every requested change to code,
+configuration, documentation or product behavior. The primary session runs
+the project-scoped `planner`, `coding`, `testing` and `deploying` roles in that
+order. Planner defines the task goal and acceptance criteria. Coding reports
+which goals its changes meet. Testing checks the artifact against both the
+planner's criteria and coding's report. Deploying prepares and verifies release
+readiness with the `project-deployment` skill. A release review does not itself
+authorize deployment; rollout still requires the user's request.
+
+This replaces the earlier discretionary delegation rule for repository changes.
+Pure questions and status requests do not require the four-role workflow.

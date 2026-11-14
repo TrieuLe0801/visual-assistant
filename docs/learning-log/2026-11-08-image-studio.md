@@ -648,3 +648,43 @@ returned HTTP 200 after recreation.
   JSON parsing of the roadmap progress file and `git diff --check`: passed.
 - No app image rebuild, container recreation, provider call or browser E2E
   check was needed for this documentation and workflow update.
+
+## Required Codex project workflow — 2026-11-14
+
+- Added `.agents/skills/project-workflow/` for every requested repository
+  change, including feature, code, configuration and documentation work.
+- Updated `AGENTS.md` to require planner, coding, testing and deploying agents
+  in sequence. The planner defines the goal and acceptance criteria. Coding
+  reports implementation against them. Testing checks both the planner goal
+  and coding report against the artifact. Deploying reviews release readiness
+  using `project-deployment`; rollout requires a separate user request.
+- Updated the coding and testing role instructions, workflow guide, project
+  status and ADR 0001 to match. Pure questions and status requests are exempt.
+
+### Verification
+
+- `env UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache uv run --with
+  PyYAML python /Users/trieule/.codex/skills/.system/skill-creator/scripts/quick_validate.py
+  .agents/skills/project-workflow`: passed (`Skill is valid!`). TOML parsing
+  of project config and four agents, plus YAML parsing of both skills: passed.
+  The first validator attempt without the temporary uv cache could not access
+  the sandboxed default cache; rerunning with the writable cache passed.
+- `uv run pytest`: 39 passed, 1 failed in
+  `tests/test_deployment_config.py::test_session_secret_file_overrides_environment`.
+  The ignored local `.env` sets `SESSION_COOKIE_SECURE=false`, while the test
+  expects the default `True`. This matches the prior worktree result. Neither
+  the test nor runtime settings were changed to mask it.
+- `uv run isort --check-only . .codex/hooks/format_python.py`,
+  `uv run black --check . .codex/hooks/format_python.py`,
+  `uv run flake8 . .codex/hooks/format_python.py`,
+  `uv run ruff check . .codex/hooks/format_python.py`,
+  `npm run build` in `frontend/`, `docker compose config --quiet`,
+  `docker compose --profile publish config --quiet` and `git diff --check`:
+  passed. An initial `npm run build` at the repo root found no `package.json`;
+  the frontend build passed from the correct directory.
+- Deployment review: no application image, Compose runtime, SQLite volume or
+  secret changed. Existing guide records paired-volume backup and rollback.
+  No deployment was requested or performed. Docker socket access was denied,
+  and local/public health endpoints were unreachable from this review, so no
+  current runtime health claim was made. Live-provider and browser checks were
+  not run for this workflow-only change.
