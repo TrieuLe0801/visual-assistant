@@ -688,3 +688,40 @@ returned HTTP 200 after recreation.
   and local/public health endpoints were unreachable from this review, so no
   current runtime health claim was made. Live-provider and browser checks were
   not run for this workflow-only change.
+
+## Compose network decoupling — 2026-11-15
+
+- Removed the archived product's external Docker network from `compose.yaml`.
+  Compose config connects `cloudflared` and `frontend` to the default network;
+  tunnel origin remains `http://frontend:80`.
+- Updated the deployment guide to describe the project-scoped default network.
+  Kept the named tunnel route, service names, volume, secrets and `aliter.app`
+  unchanged. Historical archive and baseline records remain unchanged.
+
+### Verification
+
+- `docker compose config --quiet`: passed.
+- `docker compose --profile publish config --quiet`: passed.
+- Active configuration, source, skill and current operations-document search
+  found no archived product network or identifier. Historical `docs/archive/`
+  and baseline records were excluded by design.
+- `uv run pytest`: 40 passed.
+- `uv run isort --check-only . .codex/hooks/format_python.py`,
+  `uv run black --check . .codex/hooks/format_python.py`,
+  `uv run flake8 . .codex/hooks/format_python.py`,
+  `uv run ruff check . .codex/hooks/format_python.py` and
+  `npm run build` in `frontend/`: passed.
+- `git diff --check`: passed.
+- Runtime health, deployment, browser behavior and live provider checks were
+  not run.
+
+### Deployment readiness
+
+- All four existing `backups/*.tgz` archives passed `gzip -t`. This checks
+  archive integrity, not whether their contents restore successfully.
+- `docker ps` and `docker inspect visual-assistant-cloudflared-1` could not
+  access the Docker socket in this session (`permission denied`). Running
+  container state and local/public health were not rechecked.
+- No rollout was requested or performed. Before a later rollout, retain the
+  prior images and a paired-volume backup; use the deployment guide for
+  rollback and health checks.

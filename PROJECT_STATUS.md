@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 ## Current milestone
 
@@ -131,6 +131,13 @@ Provider calls run synchronously, so a request can remain open while an image
 is generated.
 
 ## Verification
+
+- Compose network cleanup (2026-11-15): removed obsolete external network
+  coupling from `cloudflared`; Compose config attaches it to the default
+  network, where `frontend:80` is its configured origin. Deployment guide no
+  longer requires a network from archived product. `docker compose config
+  --quiet`, publish-profile config validation and active-file identifier search
+  passed; no container, volume or secret changed.
 
 - Required Codex project workflow (2026-11-14): new skill validation and
   project/agent TOML plus skill YAML parsing passed. Python style checks,
