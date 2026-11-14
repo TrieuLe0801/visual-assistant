@@ -5,8 +5,8 @@ Target: one Docker Desktop host, published at `aliter.app` through a named Cloud
 
 ## Prepare
 
-1. Start Docker Desktop. Confirm the existing external Docker network
-   `grounded-travel-planner_public-ingress` is available to Compose.
+1. Start Docker Desktop. Compose creates a project-scoped default network for
+   the backend, frontend and tunnel services.
 2. Run `python3 scripts/init-deployment-secrets.py`. It creates
    `.secrets/session_secret` with mode `0600` and never replaces an existing
    file. The path is Git and Docker ignored.

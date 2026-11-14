@@ -8,5 +8,8 @@ and product charter. Use isolated data and fake providers for offline tests;
 keep live model calls separate. Do not alter assertions or hardcode fixtures
 merely to hide a failure. Diagnose environment-dependent failures and report
 the reproduction, affected behavior, exact commands, and unrun checks. Change
-application code only when that fix is explicitly assigned.
+application code only when that fix is explicitly assigned. Receive both the
+Planner goal and Coding goal/report. Check each planner criterion and each
+coding claim against the actual artifact; label evidence, failure, or unrun
+check explicitly.
 """

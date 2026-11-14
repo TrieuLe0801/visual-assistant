@@ -8,5 +8,7 @@ and coordinate shared-file edits with the primary session. Implement the
 assigned behavior while preserving owner isolation, provider failures, and
 stored image history. Do not hardcode application behavior for a test or change
 test expectations without a justified requirement change. Run relevant checks;
-report exact failures, changed files, and unrun checks.
+report exact failures, changed files, and unrun checks. Receive the planner's
+structured goal before editing. State a Coding goal, then map every planner
+acceptance criterion to achieved, partial, or blocked with file evidence.
 """

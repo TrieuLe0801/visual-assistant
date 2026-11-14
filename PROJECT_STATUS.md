@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 ## Current milestone
 
@@ -76,6 +76,9 @@ planner completion counts carry forward.
 - Audited source and dependencies; patched confirmed session, abuse, response
   buffering, cache and account-timing risks. Raised the minimum Python version
   to 3.11 so no supported environment resolves vulnerable Pillow 12.3.0.
+- Added a required Codex project workflow for repository changes: planner goal,
+  coding implementation, testing against both goals, and deployment-readiness
+  review. The review does not itself authorize deployment.
 
 ## Implementation status
 
@@ -129,6 +132,20 @@ is generated.
 
 ## Verification
 
+- Compose network cleanup (2026-11-15): removed obsolete external network
+  coupling from `cloudflared`; Compose config attaches it to the default
+  network, where `frontend:80` is its configured origin. Deployment guide no
+  longer requires a network from archived product. `docker compose config
+  --quiet`, publish-profile config validation and active-file identifier search
+  passed; no container, volume or secret changed.
+
+- Required Codex project workflow (2026-11-14): new skill validation and
+  project/agent TOML plus skill YAML parsing passed. Python style checks,
+  frontend build, Compose config and diff check passed. `uv run pytest`
+  remains at 39 passed, 1 failed in the known local `.env` Secure-cookie test.
+  No deployment occurred; this review could not inspect live container or
+  public health because Docker socket access and network checks were
+  unavailable. See the current learning log.
 - Named tunnel documentation cleanup (2026-11-14): the running Compose
   `cloudflared` command uses `run --token-file`, and
   `https://aliter.app/api/health` returned HTTP 200. Public and local frontend
