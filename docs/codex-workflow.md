@@ -6,15 +6,16 @@ This repository keeps its Codex development workflow in Git:
 |---|---|
 | `AGENTS.md` | Project rules and required reading |
 | `.codex/config.toml` | Coordinator model and agent concurrency |
-| `.codex/agents/*.toml` | Manager, planner, coding, testing, and deployment roles with model assignments |
-| `.agents/skills/*/SKILL.md` | Workflow transfer, project verification, and deployment skills |
+| `.codex/agents/*.toml` | Planner, coding, testing, and deployment roles with model assignments |
+| `.agents/skills/project-deployment/` | Release-specific checks for this single-host image studio |
 | `.codex/hooks.json`, `.codex/hooks/format_python.py` | Python edit hook |
 | `pyproject.toml`, `uv.lock` | Development tools and locked dependencies |
 
-The Codex development agents are separate from the app's image-provider
-adapters. The coordinator and planner use `gpt-6-sol`. Coding, testing, and
-deployment use `gpt-5.6-luna`. `AGENTS.md` and project records carry active
-image-studio decisions.
+The primary session coordinates work; no separate manager agent is needed.
+Development agents are separate from the app's image-provider adapters. The
+coordinator and planner use `gpt-6-sol`. Coding, testing, and deployment use
+`gpt-5.6-luna`. `AGENTS.md` holds the verification sequence and evidence rules;
+the deployment skill holds release-specific checks.
 
 For Codex configuration and custom-agent schema, see the [configuration
 reference](https://developers.openai.com/codex/config-reference/) and
@@ -30,7 +31,7 @@ reference](https://developers.openai.com/codex/config-reference/) and
    local Codex model catalog.
 3. Set up credentials in ignored local environment files. Do not transfer
    `.env`, personal Codex config, plugin cache, or credentials through Git.
-4. Check that Codex discovers the five agents and three repository skills. Run
+4. Check that Codex discovers the four agents and one repository skill. Run
    the verification commands in `AGENTS.md`.
 
 Personal skills in `~/.agents/skills/` or `~/.codex/skills/`, including
@@ -41,20 +42,18 @@ need separate setup; they are not repository files.
 
 ## Another repository
 
-Copy `.codex/agents/` and the selected `.agents/skills/` folders. Copy
+Copy only relevant `.codex/agents/` and `.agents/skills/` folders. Copy
 `.codex/config.toml` after checking coordinator model and concurrency needs.
 Confirm each assigned model appears in the destination account's Codex model
 catalog.
 Rewrite `AGENTS.md` from the destination's actual decisions. Copy the hook
 only for a compatible Python project with its formatting tools installed.
 Remove product-specific rules, source paths, and verification commands that do
-not apply. Run `$codex-workflow-transfer` to inventory and check the
-result before committing it to the destination repository.
+not apply. Inventory the result and run the destination's own checks before
+committing it.
 
 ## Skill checks
 
-Use `skill-creator`'s `quick_validate.py` for each changed skill. SkillSpector
-checks security patterns; it does not measure whether an agent performs better
-with a skill. For performance, use a controlled with-skill/without-skill run
-through SkillEvaluator when an agent runtime and credentials are available.
-Record the exact tool versions, commands, findings, and limits with the change.
+Use `skill-creator`'s `quick_validate.py` for each changed skill. Validate the
+agent TOML files and check that instructions match the active project records.
+Record the commands, findings, and limits in the current learning log.

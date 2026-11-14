@@ -50,15 +50,14 @@ Before editing code or project decisions, read these files in order:
 ### Working agreements
 
 - The primary Codex session uses `gpt-6-sol` to coordinate project work.
-  Project agents use `gpt-6-sol` for `manager` and `planner`, and
-  `gpt-5.6-luna` for `coding`, `testing` and `deploying`. Assign bounded work
-  when specialist roles improve the result. Coordinate shared-file edits.
+  The project keeps `planner` on `gpt-6-sol` and `coding`, `testing` and
+  `deploying` on `gpt-5.6-luna`. Assign bounded work when specialist roles
+  improve the result. Coordinate shared-file edits.
 - These Codex development agents are separate from the app's runtime. See
   `docs/adr/0001-python-development-tooling.md`.
-- Use `codex-workflow-transfer` for migration to another repository or machine.
-  Use `project-change-verification` for project checks and `project-deployment`
-  for deployment work. See `docs/codex-workflow.md` for the portable file set
-  and local setup.
+- Use `project-deployment` for release work. The standard project checks below
+  govern code and tooling changes. See `docs/codex-workflow.md` for the
+  portable file set and local setup.
 - Support Python `>=3.11`. Use `uv` for dependencies, environments and command
   execution. Commit `uv.lock` after dependency changes.
 - Use `pytest`, isort, Black, flake8 and Ruff for Python checks. Use TypeScript
@@ -73,7 +72,9 @@ Before editing code or project decisions, read these files in order:
   `docs/progress/roadmap-progress.json` when a roadmap item is complete.
 - Add or update an ADR when changing a confirmed architecture decision.
 - Run the narrowest relevant checks, then the available full suite. If no
-  executable check exists, report it as `N/A`.
+  executable check exists, report it as `N/A`. Record commands, results and
+  limits in the current learning log. Diagnose failed tests and report them;
+  never hardcode behavior or weaken tests merely to make a check pass.
 
 Once the Python project exists, use these standard verification commands:
 

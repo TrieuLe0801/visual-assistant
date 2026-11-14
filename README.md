@@ -5,7 +5,8 @@ Webapp tạo ảnh từ prompt, chỉnh ảnh đã lưu và tạo biến thể. 
 
 ## MVP
 
-- Đăng ký/đăng nhập bằng email và mật khẩu.
+- Đăng nhập bằng email và mật khẩu. Đăng ký tài khoản mới đang tạm tắt; chỉ
+  các tài khoản đã có trong hệ thống đăng nhập được.
 - Tạo 1–6 ảnh từ một prompt, chỉnh sửa ảnh, tạo biến thể, xóa ảnh và mở lịch
   sử ảnh dẫn xuất.
 - SQLite lưu tài khoản và metadata; local volume lưu tệp ảnh.
@@ -24,6 +25,9 @@ Xem [product charter](docs/project-charter.md),
 Sao chép `.env.example` thành `.env` rồi đặt session secret và thông tin
 provider phù hợp. `.env` đã được Git ignore. Không đặt credential trong source,
 database hoặc log.
+
+Đăng ký bị khóa mặc định bằng `REGISTRATION_ENABLED=false` ở cả giao diện và
+API. Đặt `true` trong `.env` để mở lại trang và API đăng ký.
 
 - Provider OpenAI dùng `IMAGE_PROVIDER=openai` và `OPENAI_API_KEY`.
 - Provider tự host dùng `IMAGE_PROVIDER=openai_compatible`,
@@ -115,16 +119,15 @@ phục vụ `frontend/dist` khi build tồn tại.
 Dockerfile tạo image backend và frontend. Compose chạy container `database`
 để khởi tạo SQLite rồi thoát, backend FastAPI và frontend Nginx. SQLite/ảnh
 nằm trong một Docker volume; cổng frontend mặc định `8088` chỉ mở trên localhost.
-Đặt `FRONTEND_PORT` trong `.env` để đổi port nếu cần. Cloudflare Quick Tunnel
-chạy trong container riêng khi bật profile `publish`; không cần token hoặc domain.
-URL `trycloudflare.com` tạm thời và đổi sau khi tạo tunnel mới.
+Đặt `FRONTEND_PORT` trong `.env` để đổi port nếu cần. Named Cloudflare Tunnel
+chạy trong container riêng khi bật profile `publish`, phục vụ `aliter.app`.
+Token connector nằm trong file bị ignore `.secrets/cloudflare_tunnel_token`.
 
 Chạy `python3 scripts/init-deployment-secrets.py`, rồi
 `docker compose build app frontend` và `docker compose up -d --wait`.
-Sau đó chạy `docker compose --profile publish up -d cloudflared` và lấy URL từ
-`docker compose --profile publish logs --tail=50 cloudflared`. Quick Tunnel
-công khai cho người có URL; app vẫn yêu cầu đăng nhập. Chỉ dùng URL này để thử
-với người tin cậy. Dùng Cloudflare Access khi cấu hình domain ổn định.
+Sau đó chạy `docker compose --profile publish up -d cloudflared` và kiểm tra
+`https://aliter.app/api/health`. Domain công khai trang đăng nhập nếu chưa có
+chính sách Cloudflare Access; app vẫn yêu cầu đăng nhập.
 
 Xem [hướng dẫn triển khai, backup và restore](docs/deployment-compose-cloudflare.md).
 Không nhập credentials vào source hay Compose file.

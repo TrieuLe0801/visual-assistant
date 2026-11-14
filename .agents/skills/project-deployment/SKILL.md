@@ -1,42 +1,33 @@
 ---
 name: project-deployment
-description: Prepare and verify deployment work for this FastAPI and React image studio when the user requests a release or deployment.
+description: Prepare or verify a release of this image studio using its Compose deployment, persistent data, and Cloudflare tunnel.
 ---
 
 # Project Deployment
 
-Use this skill for deployment planning, configuration, release checks, or an
-explicit deployment request. Follow the repository read order in `AGENTS.md`.
-Inspect existing container, hosting, and release files before adding a platform
-or deployment convention.
+Use for deployment planning, configuration, release checks, or an explicit
+deployment request. Follow `AGENTS.md` and the current deployment guide in
+`docs/deployment-compose-cloudflare.md`. Inspect `compose.yaml` and the actual
+target before changing deployment files; the tunnel configuration may change
+between releases.
 
 ## Project constraints
 
-- Set `SESSION_SECRET` through the target platform's secret store before
-  non-development deployment.
-- Keep provider API keys and other credentials out of source, database, API
-  responses, and logs.
-- Keep SQLite and the image volume persistent. The documented design supports
-  one application host; multi-host deployment needs a separate storage decision.
-- Establish SQLite and image-volume backup and restore steps before production
-  data is stored.
-- Preserve owner-scoped image and file access and provider configuration on the
-  server. The UI may select 1–6 images per creation action but no other
-  provider, model or image parameters.
-- Live provider checks need valid credentials and an active endpoint. Record
-  those checks separately from offline tests and build results.
+- Preserve the paired SQLite and image volume on the single supported host.
+  Check backup and restore evidence before a change that may affect stored data.
+- Supply session and tunnel secrets from ignored files or the target secret
+  store. Never put provider credentials in tracked files or command output.
+- Check authentication, owner-scoped data access, and server-side provider
+  settings after deployment changes that touch those paths.
+- Record live provider calls separately from offline tests, builds, and health
+  checks. A healthy service does not prove image generation works.
 
 ## Deployment workflow
 
-1. Identify the requested target and environment from the user request or
-   existing repository configuration. Do not choose a hosting provider by
-   assumption.
-2. Inspect the deployment path, required secrets, persistent storage, health
-   checks, and rollback or recovery options. Report missing decisions after
-   completing independent inspection.
-3. Run the checks required by the task and project instructions. Separate build,
-   offline, live-provider, and deployed-environment evidence.
-4. Make only the requested deployment changes. Perform an external or production
-   deployment only when the user explicitly asks for it.
-5. Record the target, exact commands, observed outcome, and operational limits.
-   Never report a deployment as successful without direct evidence.
+1. Identify the target from the request and current repository configuration.
+2. Inspect secrets, storage, health checks, and rollback or recovery before a
+   release. Resolve missing target details before dependent work.
+3. Run the relevant project checks. Report failed checks without changing tests
+   or hardcoding application behavior to force a pass.
+4. Deploy when the user requests deployment. Record the target, exact commands,
+   observed outcome, and limits in the current learning log.
