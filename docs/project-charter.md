@@ -1,7 +1,11 @@
 # Studio ảnh AI — Product Charter
 
-Ngày cập nhật: 2026-11-09
+Ngày cập nhật: 2026-11-10
 Trạng thái: MVP scope đã chốt
+
+Chính sách tài khoản tạm thời: đăng ký mới đang tắt bằng
+`REGISTRATION_ENABLED=false`. Các tài khoản hiện có vẫn đăng nhập và sử dụng
+được. Bật cờ này để khôi phục cả form và API đăng ký.
 
 ## Mục tiêu
 

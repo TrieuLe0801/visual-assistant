@@ -535,3 +535,116 @@ returned HTTP 200 after recreation.
 - No live provider, public tunnel or existing Compose stack was exercised.
   The Docker image used for the previous deployment remains active until a
   separate rollout.
+
+### Registration pause and Compose rollout — 2026-11-10
+
+- Added `REGISTRATION_ENABLED=false` as the runtime default. The UI reads
+  `/api/auth/registration-status` and hides registration while disabled; the
+  registration API returns HTTP 403. Login behavior remains available.
+- Set the ignored local `.env` value to false. No credential value was read or
+  written to tracked files.
+- Ran isort, Black, flake8 and Ruff checks, frontend TypeScript/Vite build,
+  Compose publish-profile config validation and `git diff --check`; all passed.
+  Automated tests were not run for this rollout.
+- Tagged the prior app and frontend images for rollback. Stopped the tunnel and
+  app, then created `backups/image-studio-pre-registration-pause-2026-11-10.tgz`
+  from the persistent volume. `gzip -t` passed; archive size was 34.4 MiB.
+- Built the app and frontend images, then started both with Compose. Database
+  initializer exited 0; app and frontend became healthy. Restarted the
+  Cloudflare Quick Tunnel after local checks.
+- Local and public `/api/health` returned HTTP 200. Local and public
+  `/api/auth/registration-status` returned `{"enabled":false}`. Registration
+  POST returned HTTP 403; dummy login returned HTTP 401, confirming the login
+  route remains active without using a real account. Frontend root returned
+  HTTP 200. SQLite `PRAGMA integrity_check` returned `ok`; existing account
+  record remained present.
+- Current temporary Quick Tunnel URL:
+  `https://amsterdam-emotions-zones-familiar.trycloudflare.com`. Quick Tunnel
+  has no Access policy; anyone with the URL can reach login. No real account
+  login, browser session or live image operation was tested. Docker Scout was
+  not rerun on the newly built images; the latest recorded scan has 27 OS
+  findings, none high or critical.
+
+## Codex skills and agents review — 2026-11-14
+
+- Reviewed the active charter, status, ADRs, environment records, project
+  tree, source/test entry points and the existing Codex workflow. Preserved
+  pre-existing edits to deployment, registration, application and UI files.
+- Removed the `manager` agent because the primary Codex session already
+  coordinates work. Kept `planner`, `coding`, `testing` and `deploying` with
+  their existing model assignments; both model IDs are present in the local
+  Codex model catalog.
+- Removed `codex-workflow-transfer`, which serves occasional cross-repository
+  migration, and `project-change-verification`, whose checks already appear in
+  `AGENTS.md`. Kept and narrowed `project-deployment` for release-specific
+  single-host storage, secrets, tunnel and evidence checks. Updated all four
+  remaining agent instructions to preserve user edits and report failures
+  without weakening tests or hardcoding application behavior.
+- Updated `AGENTS.md`, the workflow guide and ADR 0001 to match the retained
+  files. No application code or test assertions were changed for this review.
+
+### Verification
+
+- `codex debug models | jq -r '.models[].slug' | rg
+  '^(gpt-6-sol|gpt-5\\.6-luna)$'`: both configured model IDs found.
+- Parsed `.codex/config.toml` and four agent TOMLs with `tomllib`; model and
+  role assertions passed.
+- `uv run --with PyYAML python
+  /Users/trieule/.codex/skills/.system/skill-creator/scripts/quick_validate.py
+  .agents/skills/project-deployment`: passed. The first attempt with system
+  `python3` could not run because PyYAML was not installed there; no skill
+  validation result was claimed from that attempt.
+- `uv run pytest`: 39 passed, 1 failed, both before and after workflow edits.
+  Failing test: `tests/test_deployment_config.py::test_session_secret_file_overrides_environment`.
+  It deletes `SESSION_COOKIE_SECURE` from the process environment, then
+  `Settings.from_env()` calls `load_dotenv()` and loads the ignored local
+  `.env`, where `SESSION_COOKIE_SECURE=false`. The assertion expects the
+  default `True`; observed value is `False`. No test, application behavior or
+  local setting was changed to force a pass.
+- `uv run isort --check-only . .codex/hooks/format_python.py`,
+  `uv run black --check . .codex/hooks/format_python.py`,
+  `uv run flake8 . .codex/hooks/format_python.py`,
+  `uv run ruff check . .codex/hooks/format_python.py`, frontend
+  `npm run build` and `git diff --check`: passed.
+- `uv lock --check`, `docker compose --profile publish config --quiet` and
+  JSON parsing of `docs/progress/roadmap-progress.json`: passed.
+- The pre-existing worktree changes `compose.yaml` to a named Cloudflare Tunnel
+  with an external network, while README, the deployment guide and status
+  still describe Quick Tunnel. This review did not claim that the new tunnel
+  is deployed or rewrite the in-progress deployment records.
+- Live provider, browser and deployed-environment checks: not run for this
+  workflow-only change.
+
+## Named Cloudflare Tunnel documentation — 2026-11-14
+
+- The user confirmed the domain now routes through a named Cloudflare Tunnel
+  and requested removal of the temporary tunnel workflow. The existing
+  `compose.yaml` and running `visual-assistant-cloudflared-1` already use
+  `tunnel --no-autoupdate run --token-file /run/secrets/cloudflare_tunnel_token`.
+  No container or secret was changed in this documentation update.
+- Replaced the temporary tunnel instructions in README, the deployment guide,
+  current status, roadmap and ADR 0007 with the `aliter.app` named-tunnel path.
+  Updated the deployment agent's instructions and the active security wording.
+  Kept earlier tunnel events in this log as historical evidence.
+- Updated `docs/progress/roadmap-progress.json` to record the named tunnel
+  milestone and current public health check. Cloudflare Access policy was not
+  verified; no claim is made that it is enabled.
+
+### Verification
+
+- `docker inspect --format '{{json .Config.Cmd}}' visual-assistant-cloudflared-1`:
+  the running container uses the named-tunnel token file.
+- `docker compose config --quiet` and
+  `docker compose --profile publish config --quiet`: passed.
+- `curl -fsS https://aliter.app/api/health`: HTTP 200. Public and local
+  frontend root HTML had matching SHA-256
+  `45fc73f9979622967b5b01042c02d64a356c37174769171ded5122c045dfe24f`.
+- `uv run pytest`: 39 passed, 1 failed in
+  `test_session_secret_file_overrides_environment`, matching the prior
+  worktree result. The ignored local `.env` sets `SESSION_COOKIE_SECURE=false`;
+  no assertion, runtime behavior or local configuration was changed to force
+  a pass.
+- isort, Black, flake8, Ruff, frontend `npm run build`, `uv lock --check`,
+  JSON parsing of the roadmap progress file and `git diff --check`: passed.
+- No app image rebuild, container recreation, provider call or browser E2E
+  check was needed for this documentation and workflow update.

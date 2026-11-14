@@ -78,3 +78,19 @@ the first documents cross-repository adaptation, while the second holds the
 current Python check sequence. `docs/codex-workflow.md` records what travels
 with Git and what requires local setup on another machine. The Python hook and
 tooling decision above remain in force.
+
+## Workflow pruning amendment — 2026-11-14
+
+Keep the primary session as coordinator and remove the redundant `manager`
+subagent. Keep `planner`, `coding`, `testing` and `deploying` roles. The active
+project config pins `gpt-6-sol` for the coordinator and planner and
+`gpt-5.6-luna` for the other roles; check model availability when moving to a
+different account. This supersedes the earlier inheritance rule for the current
+repository.
+
+Remove the repository `codex-workflow-transfer` and
+`project-change-verification` skills. Transfer is an occasional process
+documented in `docs/codex-workflow.md`; verification rules already live in
+`AGENTS.md`. Retain the release-specific `project-deployment` skill. Test
+failures must be diagnosed and reported, not hidden by changing assertions or
+hardcoding application behavior.

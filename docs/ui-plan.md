@@ -5,7 +5,8 @@ Status: MVP interface
 
 ## Navigation and screens
 
-- Auth screen: đăng nhập và đăng ký bằng email/mật khẩu.
+- Auth screen: đăng nhập bằng email/mật khẩu. Form đăng ký chỉ hiện khi server
+  bật `REGISTRATION_ENABLED`.
 - Thư viện: ảnh theo thứ tự mới nhất, trạng thái và prompt tóm tắt.
 - Tạo ảnh: một prompt văn bản, hỗ trợ mô tả bằng tiếng Việt, và nút tạo. Không
   chỉ có lựa chọn số lượng 1–6 ảnh; không có lựa chọn provider, model, tỉ lệ,
@@ -41,3 +42,8 @@ isolation, lỗi provider/storage, refresh/login lại và backend restart.
   chỉnh sửa với biến thể.
 - Các phản hồi thư viện hoặc tạo ảnh thuộc phiên đã đăng xuất không được đưa
   vào giao diện của phiên tiếp theo.
+
+## Temporary registration pause — 2026-11-10
+
+- Hide the registration tab while the server reports registration disabled.
+- Keep the login form available for existing accounts.

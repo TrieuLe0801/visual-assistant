@@ -25,6 +25,7 @@ services:
     environment:
       SESSION_SECRET_FILE: /run/secrets/session_secret
       SESSION_COOKIE_SECURE: "true"
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
       IMAGE_DATABASE_PATH: /data/image-studio.db
       IMAGE_STORAGE_PATH: /data/images
       FRONTEND_DIST_PATH: /app/frontend/dist
@@ -82,15 +83,33 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     profiles: ["publish"]
+    networks:
+      - default
+      - travel_planner_ingress
     depends_on:
       frontend:
         condition: service_healthy
-    command: ["tunnel", "--url", "http://frontend:80"]
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token-file
+      - /run/secrets/cloudflare_tunnel_token
+    secrets:
+      - cloudflare_tunnel_token
     restart: unless-stopped
 
 secrets:
   session_secret:
     file: ./.secrets/session_secret
+  cloudflare_tunnel_token:
+    file: ./.secrets/cloudflare_tunnel_token
 volumes:
   image_data:
     name: ${IMAGE_DATA_VOLUME:-visual_assistant_image_data}
+
+networks:
+  default: {}
+  travel_planner_ingress:
+    external: true
+    name: grounded-travel-planner_public-ingress

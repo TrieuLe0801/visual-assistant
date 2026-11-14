@@ -1,10 +1,10 @@
 {
-  "version": 16,
+  "version": 18,
   "plan_id": "ai-image-studio-2026-11-08",
-  "updated": "2026-11-10",
+  "updated": "2026-11-14",
   "planning_status": "recorded",
   "implementation_status": "offline_verified_live_provider_checks_pending",
-  "deployment_status": "local_compose_verified_cloudflare_quick_tunnel_live",
+  "deployment_status": "local_compose_verified_cloudflare_named_tunnel_live",
   "active_charter": "docs/project-charter.md",
   "active_plan": "docs/implementation-plan.md",
   "current_log": "docs/learning-log/2026-11-08-image-studio.md",
@@ -96,7 +96,7 @@
     {
       "id": "deployment",
       "title": "Docker Compose và Cloudflare Tunnel",
-      "status": "local_verified_quick_tunnel_live",
+      "status": "local_verified_named_tunnel_live",
       "tasks": [
         {"id": "compose_image_and_health", "done": true},
         {"id": "frontend_proxy_service", "done": true},
@@ -104,18 +104,18 @@
         {"id": "cloudflare_compose_service_config", "done": true},
         {"id": "persistent_volume_and_session_secret", "done": true},
         {"id": "backup_restore_verification", "done": true},
-        {"id": "cloudflare_quick_tunnel_https", "done": true}
+        {"id": "cloudflare_named_tunnel_https", "done": true}
       ]
     }
   ],
   "verification": {
-    "status": "passed_with_live_integrations_pending",
+    "status": "failed_environment_dependent_test_live_integrations_pending",
     "uv_lock_check": "passed",
     "uv_sync_locked": "passed",
     "image_studio_tests": "15 passed",
     "model_routing_tests": "6 passed",
     "prompt_interpretation_tests": "2 passed with mocked HTTP and API workflow",
-    "full_pytest_suite": "40 passed on supported Python 3.11 after Python requirement update; 1 LangSmith missing-key warning",
+    "full_pytest_suite": "Current worktree 2026-11-14: 39 passed, 1 failed in test_session_secret_file_overrides_environment because ignored local .env sets SESSION_COOKIE_SECURE=false; historical Python 3.11 run: 40 passed",
     "count_delete_tests": "20 focused database/image API tests passed; frontend selector verified by TypeScript/Vite build and deployed asset check",
     "isort": "passed",
     "black": "passed",
@@ -130,9 +130,9 @@
     "compose_config": "passed",
     "docker_image_build": "passed; prior deployed backend/frontend images plus isolated Trixie multi-stage security-audit backend image built with Python 3.11.18 and Pillow 13.0.0",
     "compose_app": "updated backend/frontend healthy in existing visual-assistant stack; localhost health/front root HTTP 200, DELETE without auth 401, SQLite integrity ok",
-    "cloudflare_compose_config": "passed; publish profile routes cloudflared to frontend:80",
+    "cloudflare_compose_config": "2026-11-14: passed; publish profile uses named tunnel token file and connects cloudflared to frontend:80",
     "backup_restore": "previous separate-volume restore passed; pre-change stopped-app archive passed gzip -t; updated live SQLite integrity ok",
-    "cloudflare_quick_tunnel_https": "passed; new temporary URL https://registered-gen-wheels-antibodies.trycloudflare.com/api/health returned HTTP 200; Access not enabled",
+    "cloudflare_named_tunnel_https": "2026-11-14: running cloudflared uses token file; https://aliter.app/api/health returned HTTP 200; Access policy not verified",
     "browser_e2e": "not_run",
     "security_audit": "Supported Python >=3.11, Pillow >=13.0.0; Python 3.10 rejected before install; 40 pytest passed on 3.11; checks/build passed; Docker Scout 27 residual (0 high/critical); locked Python dependency pip-audit 0 known; not deployed"
   },

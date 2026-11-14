@@ -145,8 +145,17 @@ def create_app(
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/api/auth/registration-status")
+    def registration_status() -> dict[str, bool]:
+        return {"enabled": settings.registration_enabled}
+
     @app.post("/api/auth/register", response_model=UserOutput, status_code=201)
     def register(payload: CredentialsInput, response: Response) -> UserOutput:
+        if not settings.registration_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Registration is temporarily disabled.",
+            )
         email = _normalize_email(payload.email)
         _validate_email(email)
         _validate_password(payload.password)
