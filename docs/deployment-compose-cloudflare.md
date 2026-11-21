@@ -135,6 +135,42 @@ volume until the restore is verified.
   SQLite retains a metadata tombstone for derived-image lineage. Older backup
   archives may still contain files deleted after the backup was made.
 
+## CI/CD
+
+`.github/workflows/ci.yml` runs on GitHub-hosted runners for pushes to `main`
+and pull requests. It runs locked Python installation, pytest, isort, Black,
+flake8, Ruff, frontend `npm ci`/build, and both Compose configuration checks.
+CI has read-only repository permission and receives no provider or deployment
+credentials.
+
+`.github/workflows/deploy.yml` is manual only. It accepts `main` as the ref,
+requires a protected GitHub environment named `production`, and targets a
+dedicated self-hosted runner labeled `image-studio-deploy` on the Compose host.
+Never attach that runner to pull-request jobs. A self-hosted runner can execute
+repository code with Docker access.
+
+Install runner checkout with Docker Compose, `curl`, `rsync`, and Python. Set a
+repository variable `DEPLOY_DIR` to a persistent absolute path outside the
+runner workspace. Create `$DEPLOY_DIR/.deploy-target` with exact content
+`image-studio-compose-host` before enabling CD. Workflow checks this marker,
+checks out source into disposable subdirectory, and synchronizes source while
+excluding `.git/`, host `.env`, `.secrets/`, `backups/`, and `.deploy-target`.
+Checkout does not persist its GitHub token. This prevents checkout cleanup from
+deleting host credentials or backup archives. Keep deployment
+checkout's ignored `.env` and `.secrets/` files on host. Set `BACKUP_DIR` as a
+runner environment variable when backups must live outside checkout. Workflow
+calls staged `scripts/deploy-compose.sh`; it requires an existing
+`visual-assistant` Compose project and named data volume, then stops the
+application and tunnel, archives the paired SQLite/image volume, retains
+rollback image tags, builds, waits for app/frontend health, checks
+`/api/health`, then starts the named tunnel. Health failure restores the prior
+image tags and attempts to restart the prior release.
+
+The workflow does not prove live provider generation, Cloudflare Access policy,
+or off-host backup durability. Verify those separately after a release. Do not
+enable automatic deployment until runner isolation, protected environment
+reviewers, and off-host backup policy are in place.
+
 ## References
 
 - [Cloudflare Tunnel setup](https://developers.cloudflare.com/tunnel/get-started/)
