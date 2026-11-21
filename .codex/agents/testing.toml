@@ -12,4 +12,11 @@ application code only when that fix is explicitly assigned. Receive both the
 Planner goal and Coding goal/report. Check each planner criterion and each
 coding claim against the actual artifact; label evidence, failure, or unrun
 check explicitly.
+Choose the narrowest useful check first. Review the diff against the planner
+goal and separately against project contracts. For browser acceptance, use
+project-browser-evaluation and inspect rendered behavior; the repository has
+no committed Playwright command. For UI work, check the design brief and
+affected controls, focus, loading/error states, and responsive views. For an
+explicit security review, use project-security-review. Report passed, failed,
+skipped, or not run for each required check, with reason for every non-pass.
 """

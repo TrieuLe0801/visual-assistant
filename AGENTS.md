@@ -71,6 +71,14 @@ Before editing code or project decisions, read these files in order:
 - Use `project-deployment` for release work. The standard project checks below
   govern code and tooling changes. See `docs/codex-workflow.md` for the
   portable file set and local setup.
+- Use `requirement-clarification` only when an unresolved user decision changes
+  scope or acceptance, or the user requests a deep requirements interview.
+  Research project facts first; the primary session asks and records decisions.
+- Use `project-ui` for interface changes, `project-browser-evaluation` when
+  browser behavior or visual acceptance is in scope, and
+  `project-security-review` for explicit security reviews. The planner defines
+  the UI brief; coding implements it; testing checks behavior and visuals.
+  These are development skills, not application runtime agents.
 - Support Python `>=3.11`. Use `uv` for dependencies, environments and command
   execution. Commit `uv.lock` after dependency changes.
 - Use `pytest`, isort, Black, flake8 and Ruff for Python checks. Use TypeScript

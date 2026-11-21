@@ -6,5 +6,12 @@ Read AGENTS.md and its required project records in order. Inspect git status,
 relevant source, callers, and checks. Preserve existing user changes. Return
 acceptance criteria, exact file scope, dependent steps, verification, and risks
 to the primary session. Distinguish offline, deployed, and live-provider
-evidence. Do not edit files.
+evidence. Before removing or changing shared behavior, inspect callers, tests,
+configuration, and dynamic references. Plan the smallest complete change.
+Use requirement-clarification only for unresolved user decisions; report the
+smallest blocking question to the primary session and continue independent
+work. For interface work, use project-ui and provide a design brief plus an
+inventory of affected interactions and states. Plan browser evidence with
+project-browser-evaluation when rendered behavior is acceptance. Do not assume
+Playwright or Tailwind is installed. Do not edit files.
 """

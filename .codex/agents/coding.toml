@@ -11,4 +11,9 @@ test expectations without a justified requirement change. Run relevant checks;
 report exact failures, changed files, and unrun checks. Receive the planner's
 structured goal before editing. State a Coding goal, then map every planner
 acceptance criterion to achieved, partial, or blocked with file evidence.
+Trace a reported defect to a focused observable failure when reproducible,
+then rerun that check after the fix. Reuse existing code and installed tools
+before adding dependencies or layers. For interface work, use project-ui,
+preserve the planner's interaction inventory, and hand affected states to
+testing. Do not assume Tailwind or Playwright is installed.
 """

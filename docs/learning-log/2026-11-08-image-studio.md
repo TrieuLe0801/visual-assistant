@@ -725,3 +725,45 @@ returned HTTP 200 after recreation.
 - No rollout was requested or performed. Before a later rollout, retain the
   prior images and a paired-volume backup; use the deployment guide for
   rollback and health checks.
+
+## Repository skill and agent adaptation — 2026-11-21
+
+- Compared the source `grounded-travel-planner` development skills, five agent
+  definitions, `AGENTS.md`, and `.codex/config.toml` with this repository's
+  active charter, UI plan, source, checks, and four-role project workflow. The
+  source repository remained read-only.
+- Added project-owned `requirement-clarification`, `project-ui`,
+  `project-browser-evaluation`, and `project-security-review` skills. Reworked
+  scope and examples for React/TypeScript/CSS, FastAPI, SQLite, local image
+  files, owner isolation, server-selected image providers, and actual UI flows.
+- Folded the source delivery-orchestrator's useful Goal Card, call-path,
+  minimal-change, and evidence guidance into the existing `project-workflow`.
+  Kept the target's required planner/coding/testing/deploying sequence and
+  model assignments. Adapted the four agent instructions and updated
+  `AGENTS.md` and `docs/codex-workflow.md` routing and skill inventory.
+- Did not import the source research/coordinator/deployer roles, travel product
+  policies, Auth0/PostgreSQL/Tavily/LangGraph assumptions, Tailwind design
+  system, or Playwright command. The target has no committed browser test
+  runner; browser evaluation uses available tools and records observed evidence.
+  No application runtime behavior, dependencies, or architecture decision
+  changed. No roadmap item closed.
+
+### Verification
+
+- `quick_validate.py` through `uv run --with PyYAML python` on all six skills:
+  passed. The first broad directory loop met two leftover untracked skill
+  directories without `SKILL.md` and exited 1; the corrected loop selected
+  only actual skills and passed.
+- `tomllib` parsed `.codex/config.toml` and all four agent TOMLs; `json` parsed
+  `docs/progress/roadmap-progress.json`; PyYAML parsed six skill frontmatters
+  and two existing `agents/openai.yaml` files. Local references in 12 touched
+  instruction/skill files resolved. An initial reference probe treated the
+  `.codex/agents/*.toml` glob as a literal file and exited 1; the corrected
+  glob-aware probe passed.
+- `uv run pytest`: 40 passed. `uv run isort --check-only .
+  .codex/hooks/format_python.py`, `uv run black --check .
+  .codex/hooks/format_python.py`, `uv run flake8 .
+  .codex/hooks/format_python.py`, `uv run ruff check .
+  .codex/hooks/format_python.py`, and `npm run build` in `frontend/`: passed.
+- Browser, deployed-container, and live-provider checks: N/A for instruction
+  and skill changes. No deployment or PR requested or performed.
