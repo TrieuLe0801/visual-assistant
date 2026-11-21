@@ -13,7 +13,11 @@ The primary Codex session coordinates four project agents in this order:
 
 1. `planner` reads the required project records and current worktree, then
    defines one structured goal. Include acceptance criteria, owned file scope,
-   dependencies, checks, evidence boundaries, and risks. Planner does not edit.
+   dependencies, checks, evidence boundaries, and risks. Research callers and
+   existing behavior before choosing scope. For UI work, include a design brief
+   and interaction inventory using `project-ui`. If a user decision blocks
+   acceptance, use `requirement-clarification`; continue independent work.
+   Planner does not edit.
 2. `coding` receives the planner goal and owns the implementation scope. It
    preserves existing user changes, records a coding goal, maps each planned
    criterion to achieved, partial, or blocked, and reports changed files and
@@ -21,7 +25,8 @@ The primary Codex session coordinates four project agents in this order:
 3. `testing` receives both planner's goal and coding's report. It checks the
    actual artifact against every acceptance criterion and coding claim, runs
    deterministic relevant checks, and reports failures with reproduction steps.
-   It must not weaken tests or invent live-provider evidence.
+   For browser acceptance, use `project-browser-evaluation`. It must not weaken
+   tests or invent live-provider evidence.
 4. `deploying` uses `project-deployment` to review release readiness, rollback,
    secrets, storage, health, and live-evidence limits. It may prepare release
    steps, but deploys only when the user explicitly requests deployment.
@@ -32,6 +37,14 @@ correction back to `coding`, then rerun testing and deployment readiness. Do not
 declare completion until the artifact, verification result, and required project
 records are updated. Keep offline tests, deployed health checks, and live model
 checks separate.
+
+Trace defects through the affected path and confirm a focused failure before a
+fix when reproducible. Reuse existing code and installed tools before adding
+dependencies or layers. Preserve validation, owner isolation, data-loss
+handling, accessibility, and explicit acceptance. Run narrow relevant checks,
+then the full available suite required by `AGENTS.md`; label unavailable checks
+`N/A`. A documentation-only edit does not require unrelated browser or live
+provider checks. Do not create a platform Goal for routine repository work.
 
 ## Handoff format
 
