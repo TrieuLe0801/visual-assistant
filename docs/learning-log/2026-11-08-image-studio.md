@@ -3,6 +3,25 @@
 Date: 2026-11-08
 Status: Current
 
+## GitHub Actions CI/CD — 2026-11-21
+
+- Added hosted CI for locked Python tests and style checks, frontend build, and
+  default/publish Compose validation.
+- Added manual main-only CD for a protected production environment and a
+  dedicated self-hosted Compose runner. Deployment backs up the paired volume,
+  checks health, and attempts image rollback on failure.
+- No runner, environment approval, deployment, provider call, or public health
+  check was available in this change. See ADR 0012 and the deployment guide.
+- Correction: CD stages source into persistent `DEPLOY_DIR`, excludes `.env`,
+  `.secrets/`, backups and target marker, and requires the existing
+  `visual-assistant` Compose project and volume before Compose runs. Checkout
+  no longer persists its token, and staging excludes `.git/`.
+  `bash -n scripts/deploy-compose.sh`, YAML parsing, `docker compose config
+  --quiet`, `docker compose --profile publish config --quiet`, and
+  `git diff --check` passed. `uv run pytest -q`: 42 passed. Standard isort,
+  Black, flake8 and Ruff checks passed. Frontend `npm ci --offline` and
+  `npm run build` passed. Deployment remains unverified.
+
 ## Objective
 
 Replace the travel planner product with a personal webapp for image generation,

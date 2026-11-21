@@ -108,6 +108,10 @@ planner completion counts carry forward.
 5. Schedule off-host copies of the documented stopped-app backup before
    storing production data.
 
+6. Register and harden the dedicated `image-studio-deploy` runner, configure
+   protected `production` environment reviewers, then run one supervised
+   deployment rehearsal.
+
 ## Next
 
 - Record live provider results and any provider-specific capability gaps.
@@ -131,6 +135,16 @@ Provider calls run synchronously, so a request can remain open while an image
 is generated.
 
 ## Verification
+
+- CI/CD workflow (2026-11-21): added GitHub-hosted CI for locked Python tests,
+  style checks, frontend build and both Compose config profiles. Added manual,
+  main-only, protected-environment CD for a dedicated self-hosted runner with
+  paired-volume backup, health check and image-tag rollback. YAML and shell
+  checks passed; no deployment or live health check was performed. Follow-up
+  correction stages source into persistent `DEPLOY_DIR` while preserving host
+  `.env`, `.secrets/`, and backups, with target marker guard. See
+  [ADR 0012](docs/adr/0012-ci-cd-workflow.md) and the
+  [deployment guide](docs/deployment-compose-cloudflare.md).
 
 - Session revocation audit (2026-11-21): fixed logout cookie replay. SQLite now
   stores SHA-256 token hashes with expiry, and every authenticated request checks
