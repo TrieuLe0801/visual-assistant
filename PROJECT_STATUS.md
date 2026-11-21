@@ -132,6 +132,16 @@ is generated.
 
 ## Verification
 
+- Session revocation audit (2026-11-21): fixed logout cookie replay. SQLite now
+  stores SHA-256 token hashes with expiry, and every authenticated request checks
+  revocation. Offline regression covers replay after logout and app restart,
+  while a separately issued session remains valid. `uv run pytest -q`: 42 passed;
+  isort, Black, flake8, Ruff, frontend build and `git diff --check` passed.
+- Correction: invalid or anonymous logout cookies are not persisted, preventing
+  unbounded revocation-table growth from arbitrary public requests. Offline
+  probe with 100 arbitrary cookies created zero revocation rows. No deployment
+  or live-provider check was performed for this change.
+
 - Compose network cleanup (2026-11-15): removed obsolete external network
   coupling from `cloudflared`; Compose config attaches it to the default
   network, where `frontend:80` is its configured origin. Deployment guide no

@@ -137,6 +137,55 @@ def test_register_login_logout_and_password_protection(client: TestClient) -> No
     assert client.get("/api/auth/me").status_code == 200
 
 
+def test_logout_revokes_captured_cookie_across_restart_and_keeps_other_session(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(
+        database_path=tmp_path / "revocation.sqlite3",
+        image_storage_path=tmp_path / "revocation-images",
+        frontend_dist_path=tmp_path / "frontend-dist",
+    )
+    app = create_app(settings=settings, provider=FakeProvider())
+    with TestClient(app) as first_client:
+        register(first_client, "revocation@example.com")
+        captured_cookie = first_client.cookies.get("image_studio_session")
+        assert captured_cookie
+        assert first_client.post("/api/auth/logout").status_code == 204
+        first_client.cookies.set("image_studio_session", captured_cookie)
+        assert first_client.get("/api/auth/me").status_code == 401
+
+        second_client = TestClient(app)
+        with second_client:
+            assert (
+                second_client.post(
+                    "/api/auth/login",
+                    json={
+                        "email": "revocation@example.com",
+                        "password": "strong-pass-123",
+                    },
+                ).status_code
+                == 200
+            )
+            assert second_client.get("/api/auth/me").status_code == 200
+
+    restarted = create_app(settings=settings, provider=FakeProvider())
+    with TestClient(restarted) as restarted_client:
+        restarted_client.cookies.set("image_studio_session", captured_cookie)
+        assert restarted_client.get("/api/auth/me").status_code == 401
+
+
+def test_logout_with_invalid_cookie_does_not_create_revocation_record(
+    client: TestClient,
+) -> None:
+    client.cookies.set("image_studio_session", "junk-cookie")
+    assert client.post("/api/auth/logout").status_code == 204
+    with client.app.state.database.connections.connect() as connection:
+        count = connection.execute("SELECT COUNT(*) FROM revoked_sessions").fetchone()[
+            0
+        ]
+    assert count == 0
+
+
 def test_generate_persists_prompt_file_and_owner_scope(
     client: TestClient, fake_provider: FakeProvider
 ) -> None:

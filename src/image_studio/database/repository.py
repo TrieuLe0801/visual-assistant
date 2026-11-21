@@ -192,6 +192,28 @@ class Database:
                 (current - 86400,),
             )
 
+    def revoke_session(
+        self, token_hash: str, expires_at: int, *, now: int | None = None
+    ) -> None:
+        current = int(time.time()) if now is None else now
+        with self.connections.connect() as connection:
+            connection.execute(
+                "DELETE FROM revoked_sessions WHERE expires_at <= ?", (current,)
+            )
+            connection.execute(
+                "INSERT OR REPLACE INTO revoked_sessions (token_hash, expires_at) "
+                "VALUES (?, ?)",
+                (token_hash, expires_at),
+            )
+
+    def is_session_revoked(self, token_hash: str) -> bool:
+        with self.connections.connect() as connection:
+            row = connection.execute(
+                "SELECT 1 FROM revoked_sessions WHERE token_hash = ?",
+                (token_hash,),
+            ).fetchone()
+        return row is not None
+
     def close(self) -> None:
         return None
 

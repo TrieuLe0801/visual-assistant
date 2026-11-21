@@ -32,4 +32,8 @@ CREATE TABLE IF NOT EXISTS request_limits (
     window_start INTEGER NOT NULL,
     hits INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS revoked_sessions (
+    token_hash TEXT PRIMARY KEY,
+    expires_at INTEGER NOT NULL
+);
 """

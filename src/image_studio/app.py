@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -133,6 +134,8 @@ def create_app(
     def require_user(request: Request) -> User:
         token = request.cookies.get(SESSION_COOKIE_NAME)
         user_id = session_codec.read(token) if token else None
+        if token and database.is_session_revoked(_token_hash(token)):
+            user_id = None
         user = database.get_user_by_id(user_id) if user_id else None
         if user is None:
             raise HTTPException(
@@ -207,7 +210,12 @@ def create_app(
         return _user_output(user)
 
     @app.post("/api/auth/logout", status_code=204)
-    def logout(response: Response) -> Response:
+    def logout(request: Request, response: Response) -> Response:
+        token = request.cookies.get(SESSION_COOKIE_NAME)
+        if token and session_codec.read(token) is not None:
+            database.revoke_session(
+                _token_hash(token), int(time.time()) + settings.session_ttl_seconds
+            )
         response.delete_cookie(
             SESSION_COOKIE_NAME,
             path="/",
@@ -433,6 +441,10 @@ def _normalize_email(email: str) -> str:
 
 def _email_key(email: str) -> str:
     return hashlib.sha256(email.encode("utf-8")).hexdigest()
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _validate_email(email: str) -> None:

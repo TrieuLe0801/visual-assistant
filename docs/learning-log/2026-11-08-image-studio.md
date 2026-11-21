@@ -45,6 +45,25 @@ are unavailable.
 - Vite 8.3.6.
 - See [image-studio environment baseline](../experiments/image-studio-environment.md).
 
+## Session revocation security fix — 2026-11-21
+
+- Confirmed logout replay: a captured signed cookie remained accepted after
+  `/api/auth/logout` because logout only cleared the browser cookie.
+- Added SQLite-backed session revocation with SHA-256 token hashes and expiry;
+  authenticated routes reject revoked tokens, including after app restart.
+- Added regression coverage for replay and independent-session behavior. No
+  token value or secret is persisted.
+- Follow-up review found arbitrary logout cookies could create unbounded rows.
+  Logout now revokes only a valid unexpired signed token; invalid logout still
+  clears the browser cookie and returns 204. Revocation cleanup runs on valid
+  revocation, not on every authenticated request.
+- Focused `uv run pytest tests/test_image_studio.py -q`: 23 passed. Full `uv run
+  pytest -q`: 42 passed. Offline replay probe returned 401 on account, image
+  list, image file and generation endpoints after logout; restart and a separate
+  session passed. A 100-cookie invalid logout probe created no revocation rows.
+- isort, Black, flake8, Ruff, frontend `npm run build` and `git diff --check`:
+  passed. No live provider, container rollout or browser E2E check was run.
+
 ## Verification
 
 - `uv lock --check --cache-dir /private/tmp/visual-assistant-uv-cache`: passed.
