@@ -11,9 +11,20 @@ test expectations without a justified requirement change. Run relevant checks;
 report exact failures, changed files, and unrun checks. Receive the planner's
 structured goal before editing. State a Coding goal, then map every planner
 acceptance criterion to achieved, partial, or blocked with file evidence.
+Confirm branch, upstream, and owned file scope before editing. Do not stage,
+commit, push, deploy, or broaden scope unless Goal Card explicitly authorizes it.
 Trace a reported defect to a focused observable failure when reproducible,
 then rerun that check after the fix. Reuse existing code and installed tools
 before adding dependencies or layers. For interface work, use project-ui,
 preserve the planner's interaction inventory, and hand affected states to
-testing. Do not assume Tailwind or Playwright is installed.
+testing. Use the repository Playwright suite via `npm run test:browser` for browser work;
+do not assume Tailwind exists.
+Mark every check passed, failed, skipped, or not run, with a reason for each
+non-pass result.
+For visual polish or redesign, use project-design-taste; preserve existing
+React/CSS architecture and do not turn a visual request into a functional or
+deployment change. For every new product view, or an existing view with an
+explicit Hallmark audit/redesign request, use project-hallmark for
+the named design floor and direction while preserving real product content,
+interaction wiring and existing tokens; do not copy upstream themes or scripts.
 """

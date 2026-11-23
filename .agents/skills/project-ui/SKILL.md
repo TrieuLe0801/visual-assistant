@@ -8,6 +8,10 @@ description: Plan and change Visual Assistant's React interface while preserving
 Use for interface audits, polish, and requested redesigns. Read `AGENTS.md`,
 `docs/project-charter.md`, `docs/ui-plan.md`, and relevant ADRs. Inspect
 `frontend/src/App.tsx`, the affected CSS, and API responses before editing.
+For visual polish or redesign, use `project-design-taste`. For every new
+product view, also use `project-hallmark`; for an existing view, use Hallmark
+only when the user names a Hallmark audit/redesign. Keep this skill as product
+workflow and interaction-preservation source of truth.
 
 Planner records a compact brief: affected view, user task, existing components
 and styles, available real content, acceptance criteria, and changed files.
@@ -33,4 +37,8 @@ empty libraries, loading and error recovery, and reduced motion when affected.
 
 Coding hands the brief and interaction inventory to testing. When acceptance
 depends on rendered behavior or appearance, use `project-browser-evaluation`.
+The repository Playwright suite runs with mocked `/api/**` responses in desktop
+and mobile Chromium. Add or update focused browser scenarios for affected
+controls, states, keyboard focus, and responsive overflow; keep backend and
+live-provider evidence separate.
 Separate build, browser, backend, deployed, and live-provider evidence.
