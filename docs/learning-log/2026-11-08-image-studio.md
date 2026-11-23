@@ -3,6 +3,20 @@
 Date: 2026-11-08
 Status: Current
 
+## UI visual refresh — 2026-11-23
+
+- Applied image-first gallery hierarchy (three-column desktop, two-column tablet/phone), larger readable typography, warmer surfaces, translucent navigation chrome, and clearer action contrast in `frontend/src/ux-polish.css`.
+- Preserved auth, library, create 1–6 images, detail, edit, variation, delete, download, loading, empty, partial-batch, and error behaviors. No provider/model/size controls added.
+- Responsive rules cover desktop, tablet, 320px phone layouts; primary controls retain 44px minimum touch targets, visible focus, and reduced-motion handling.
+- Research used Figma's 2026 bold typography direction, Adobe's human/organic 2026 direction, and WCAG 2.2 reflow, focus, and target-size guidance.
+
+### Verification
+
+- `npm ci --offline` and `npm run build` in `frontend/`: passed after CSS refresh; Vite emitted the production bundle and TypeScript completed.
+- `uv run pytest -q`: 42 passed. `uv run isort --check-only . .codex/hooks/format_python.py`, `uv run black --check . .codex/hooks/format_python.py`, `uv run flake8 . .codex/hooks/format_python.py`, and `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- `git diff --check`: passed after the gallery-density correction.
+- Local frontend `http://127.0.0.1:8088/` returned HTTP 200 before the refresh. CUA browser attachment returned `browser access host is unavailable`; rendered interaction and screenshot comparison remain unverified.
+
 ## GitHub Actions CI/CD — 2026-11-21
 
 - Added hosted CI for locked Python tests and style checks, frontend build, and
