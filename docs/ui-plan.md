@@ -47,3 +47,11 @@ isolation, lỗi provider/storage, refresh/login lại và backend restart.
 
 - Hide the registration tab while the server reports registration disabled.
 - Keep the login form available for existing accounts.
+
+## Visual refresh — 2026-11-23
+
+- Keep image content as the visual focus: three-column desktop gallery, two-column tablet gallery, and two-column phone gallery with larger thumbnails and clearer metadata.
+- Use warmer neutral surfaces, translucent navigation chrome, restrained green gradient actions, and editorial headline sizing. This follows current bold typography and human, organic visual direction without adding decorative content to the workflow.
+- Keep primary controls at least 44px high, visible keyboard focus, readable prompt text, and reduced-motion handling. Layout remains usable at 320px without horizontal overflow.
+- Research references: [Figma web design trends](https://www.figma.com/resource-library/web-design-trends/), [Adobe Creative Trends 2026](https://business.adobe.com/uk/resources/creative-trends-report.html), and [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
+- Browser automation could not attach to the local app host in this session; HTTP availability and production build remain separate evidence.

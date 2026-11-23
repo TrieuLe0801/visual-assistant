@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-15
+Last updated: 2026-11-23
 
 ## Current milestone
 
@@ -43,6 +43,8 @@ charter and implementation plan are preserved under
 planner completion counts carry forward.
 
 ## Done
+
+- Refreshed the React visual system for image-first gallery scanning, clearer typography, responsive 320px/tablet/desktop layouts, stronger touch targets and keyboard focus while preserving MVP workflows. See `docs/ui-plan.md` and the current learning log.
 
 - Recorded image-studio requirements, provider/storage decisions, MVP limits
   and acceptance scenarios in the charter and [ADR 0005](docs/adr/0005-ai-image-studio.md).
