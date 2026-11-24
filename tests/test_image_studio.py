@@ -310,6 +310,66 @@ def test_provider_error_is_recorded_as_failure_not_success(
     assert records[0]["error"] == response.json()["detail"]
 
 
+def test_structured_edit_rejection_is_persisted_as_safe_failure(
+    tmp_path: Path,
+) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/images/edits"):
+            return httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": "invalid_image",
+                        "message": "private upstream prompt and filename",
+                    }
+                },
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            json={"data": [{"b64_json": base64.b64encode(PNG_BYTES).decode()}]},
+            request=request,
+        )
+
+    settings = make_settings(
+        database_path=tmp_path / "provider-rejection.sqlite3",
+        image_storage_path=tmp_path / "provider-rejection-images",
+        frontend_dist_path=tmp_path / "frontend-dist",
+    )
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(respond),
+    )
+    try:
+        with TestClient(
+            create_app(settings=settings, provider=provider)
+        ) as test_client:
+            register(test_client, "structured-failure@example.com")
+            original = test_client.post(
+                "/api/images/generate", json={"prompt": "A mountain"}
+            ).json()
+            response = test_client.post(
+                f"/api/images/{original['id']}/edit",
+                json={"prompt": "Make it blue"},
+            )
+
+            assert response.status_code == 502
+            assert response.json()["detail"] == (
+                "Image provider rejected the source image. Check its format and size."
+            )
+            records = test_client.get("/api/images").json()
+            failed = next(record for record in records if record["status"] == "failed")
+            assert failed["parent_id"] == original["id"]
+            assert failed["file_url"] is None
+            assert failed["error"] == response.json()["detail"]
+            assert "private" not in failed["error"]
+            assert len(list(test_client.app.state.storage.root.rglob("*.png"))) == 1
+    finally:
+        provider.close()
+
+
 def test_oversized_provider_image_is_rejected_and_recorded_as_failure(
     client: TestClient, fake_provider: FakeProvider
 ) -> None:
@@ -585,5 +645,65 @@ def test_adapter_rejects_oversized_streamed_response(
     try:
         with pytest.raises(ImageProviderError, match="response is too large"):
             provider.generate("A lantern")
+    finally:
+        provider.close()
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (
+            {"code": "invalid_image", "message": "private source details"},
+            "source image",
+        ),
+        (
+            {"code": "image_edit_not_supported", "message": "private details"},
+            "does not support this image edit",
+        ),
+        (
+            {"code": "unsupported_parameter", "param": "output_format"},
+            "'output_format' image parameter",
+        ),
+    ],
+)
+def test_adapter_maps_structured_edit_rejections_safely(
+    error: dict[str, str], expected: str
+) -> None:
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(400, json={"error": error}, request=request)
+        ),
+    )
+    try:
+        with pytest.raises(ImageProviderError, match=expected) as raised:
+            provider.edit("Make it blue", PNG_BYTES, "image/png")
+        assert "private" not in str(raised.value)
+    finally:
+        provider.close()
+
+
+def test_adapter_keeps_generic_message_for_unknown_rejection() -> None:
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                422,
+                json={"error": {"code": "vendor_secret", "message": "private"}},
+                request=request,
+            )
+        ),
+    )
+    try:
+        with pytest.raises(
+            ImageProviderError,
+            match="rejected this prompt or source image",
+        ) as raised:
+            provider.edit("Make it blue", PNG_BYTES, "image/png")
+        assert "private" not in str(raised.value)
     finally:
         provider.close()
