@@ -29,6 +29,44 @@ Status: Current
   Playwright” wording. Targeted routing search, TOML parse and `git diff
   --check` passed.
 
+## UI/UX studio redesign — 2026-11-24
+
+Coding goal: improve the existing React studio's library, prompt creation and
+detail hierarchy while preserving auth, image workflows and the 1–6 selector.
+The library now groups count, ordering and next-step guidance. The create form
+groups prompt guidance and options, and shows semantic batch progress. Detail
+groups follow-on edit and variation actions. `ux-polish.css` applies a warm
+editorial visual system and responsive layout. No backend, dependency or
+provider code changed. Research sources and acceptance mapping are in
+`docs/ui-plan.md`.
+
+Correction cycle 2 added client-side prompt search and status filtering to the
+library, a distinct no-match state, and a focused Playwright scenario. Search
+and filter reset on logout. A follow-up mobile fix sets `.create-layout` to one
+column below 760px so the prompt form remains usable at 320px.
+
+Testing result: all six planner criteria remain present in source. Library,
+create and detail hierarchy changed; auth and stored-output behavior are
+preserved. Search and filter use loaded records and the original prompt.
+Rendered layout and browser behavior are verified below; live provider and
+deployment behavior remain separate evidence.
+
+Verification:
+
+- `uv run pytest -q`: passed, 42 tests.
+- `uv run isort --check-only . .codex/hooks/format_python.py`: passed.
+- `uv run black --check . .codex/hooks/format_python.py`: passed.
+- `uv run flake8 . .codex/hooks/format_python.py`: passed.
+- `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- `git diff --check`: passed.
+- `npm ci`: passed, 29 packages installed.
+- `npm run build`: passed.
+- `npm run test:browser -- --workers=1`: passed, 14 desktop/mobile tests,
+  including 320px layout and library search/filter.
+- `docker compose config --quiet`: passed in deployment-readiness review.
+- Running stack, tunnel, public health and live provider: not run for this
+  source revision. Deployment was not requested or performed.
+
 ## Commit and PR preparation — 2026-11-23
 
 - Fixed a malformed planner-agent instruction that split the repository

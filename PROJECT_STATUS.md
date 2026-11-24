@@ -99,6 +99,14 @@ planner completion counts carry forward.
 
 ## Now
 
+- UI/UX redesign pass (2026-11-24) updates the existing studio toward a calm
+  editorial workspace: stronger image-first library scanning, clearer prompt
+  stage, warmer neutral surfaces, pill controls, responsive spacing and reduced
+  motion. Library also supports client-side prompt search and status filtering,
+  with a distinct no-match state. API, provider settings and image workflows
+  are unchanged. Frontend build and 14-test desktop/mobile Playwright suite
+  pass, including the 320px create layout.
+
 1. Retry image generation in the browser, including a multi-image action.
    Verify prompt interpretation and output separately from health checks.
 2. Retry image generation in the browser after the security-patched image

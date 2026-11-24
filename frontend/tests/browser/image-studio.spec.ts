@@ -129,6 +129,23 @@ test("library error offers retry", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Thư viện hình ảnh" })).toBeVisible();
 });
 
+test("library search and status filter narrow saved images without API calls", async ({ page }) => {
+  const api = await mockApi(page, { images: [image(1, "Bãi biển lúc hoàng hôn"), { ...image(2, "Chân dung studio"), status: "failed" }] });
+  await page.goto("/");
+  await api.login();
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Bãi biển/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Chân dung/ })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Tìm theo prompt" }).fill("biển");
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Bãi biển/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Chân dung/ })).toHaveCount(0);
+  await page.getByRole("searchbox", { name: "Tìm theo prompt" }).fill("không có");
+  await expect(page.getByRole("heading", { name: "Không tìm thấy ảnh phù hợp" })).toBeVisible();
+  await page.getByRole("button", { name: "Xóa bộ lọc" }).click();
+  await page.getByLabel("Lọc theo trạng thái").selectOption("failed");
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Chân dung/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Bãi biển/ })).toHaveCount(0);
+});
+
 test("logout clears prior library data", async ({ page }) => {
   const api = await mockApi(page, { images: [image(8, "Dữ liệu riêng tư")] });
   await page.goto("/");
