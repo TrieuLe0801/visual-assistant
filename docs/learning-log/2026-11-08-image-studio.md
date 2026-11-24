@@ -964,3 +964,27 @@ returned HTTP 200 after recreation.
   with “repository Playwright” and added explicit Hallmark routing for new
   product views. TOML parse, targeted wording search and `git diff --check`:
   passed.
+
+## Provider rejection diagnostics — 2026-11-24
+
+- Traced image edit failures to the OpenAI-compatible adapter's 400/422 branch.
+  It discarded structured provider fields and returned one generic message.
+- Added bounded parsing for allow-listed error codes and parameters. Source
+  image, edit capability and unsupported request parameter failures now return
+  safe actionable messages without copying provider text.
+- Unknown or malformed error bodies retain the generic message. Success,
+  credential, rate-limit and server-error mappings remain unchanged.
+
+### Verification
+
+- `uv run pytest tests/test_image_studio.py -q`: passed (28 tests).
+- `uv run pytest -q`: passed (47 tests).
+- `npm ci --offline && npm run build` in `frontend/`: passed.
+- `uv run isort --check-only . .codex/hooks/format_python.py`: passed.
+- `uv run black --check . .codex/hooks/format_python.py`: passed.
+- `uv run flake8 . .codex/hooks/format_python.py`: passed.
+- `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- `git diff --check`: passed.
+- Live provider edit: not run; current checkout has no provider credentials.
+- Deployment: not run. Existing Compose target health returned HTTP 200 locally;
+  public health could not be checked because DNS resolution failed.

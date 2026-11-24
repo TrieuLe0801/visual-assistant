@@ -17,6 +17,26 @@ from .provider import (
 
 MAX_PROVIDER_RESPONSE_BYTES = 30 * 1024 * 1024
 
+_SOURCE_ERROR_CODES = {
+    "invalid_image",
+    "invalid_image_format",
+    "image_parse_error",
+    "image_size_exceeded",
+    "image_too_large",
+}
+_CAPABILITY_ERROR_CODES = {
+    "image_edit_not_supported",
+    "model_not_supported",
+    "unsupported_model",
+    "unsupported_operation",
+}
+_PARAMETER_ERROR_CODES = {
+    "invalid_parameter",
+    "unknown_parameter",
+    "unsupported_parameter",
+}
+_SAFE_ERROR_PARAMS = {"image", "source", "source_image", "model", "output_format"}
+
 
 class OpenAICompatibleProvider:
     """Use OpenAI-style `/images/*` endpoints and base64 image responses.
@@ -129,7 +149,7 @@ class OpenAICompatibleProvider:
         if not response.is_success:
             status = response.status_code
             if status in {400, 422}:
-                message = "Image provider rejected this prompt or source image."
+                message = _rejection_message(response)
             elif status in {401, 403}:
                 message = "Image provider rejected its configured credentials."
             elif status == 429:
@@ -151,6 +171,41 @@ class OpenAICompatibleProvider:
         if not isinstance(payload, dict):
             raise ImageProviderError("Image provider returned an invalid response.")
         return payload
+
+
+def _rejection_message(response: httpx.Response) -> str:
+    """Map allow-listed provider fields to safe, actionable messages.
+
+    Provider messages can contain prompts, filenames, or other user/provider
+    data. Never copy them into an API error or persisted operation record.
+    """
+    details = bytearray()
+    for chunk in response.iter_bytes(chunk_size=65536):
+        if len(details) + len(chunk) > MAX_PROVIDER_RESPONSE_BYTES:
+            return "Image provider rejected this prompt or source image."
+        details.extend(chunk)
+    try:
+        payload = json.loads(details)
+    except ValueError:
+        return "Image provider rejected this prompt or source image."
+    if not isinstance(payload, dict):
+        return "Image provider rejected this prompt or source image."
+    error = payload.get("error", payload)
+    if not isinstance(error, dict):
+        return "Image provider rejected this prompt or source image."
+    code = error.get("code")
+    param = error.get("param")
+    if isinstance(code, str) and code in _SOURCE_ERROR_CODES:
+        return "Image provider rejected the source image. Check its format and size."
+    if isinstance(code, str) and code in _CAPABILITY_ERROR_CODES:
+        return "Configured image provider does not support this image edit."
+    if isinstance(code, str) and code in _PARAMETER_ERROR_CODES:
+        if isinstance(param, str) and param in _SAFE_ERROR_PARAMS:
+            return f"Image provider does not support the '{param}' image parameter."
+        return "Image provider rejected an unsupported image request parameter."
+    if isinstance(code, str) and code == "content_policy_violation":
+        return "Image provider rejected the prompt for safety reasons."
+    return "Image provider rejected this prompt or source image."
 
 
 def _image_from_response(payload: dict[str, object]) -> GeneratedImage:
