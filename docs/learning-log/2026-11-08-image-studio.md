@@ -1026,3 +1026,76 @@ returned HTTP 200 after recreation.
 - Live provider edit: not run; current checkout has no provider credentials.
 - Deployment: not run. Existing Compose target health returned HTTP 200 locally;
   public health could not be checked because DNS resolution failed.
+
+### Correction — typed provider rejection without `code` — 2026-11-24
+
+- Compatible providers can return HTTP 400/422 errors with `type` and `param`
+  but no `code`. The adapter now maps allow-listed parameter names for the
+  known invalid-request types, and appends HTTP status to the generic fallback.
+  Provider `message`, prompt text, source filename, image bytes and credentials
+  remain excluded from errors and persisted operation records.
+- Focused adapter suite: `uv run pytest tests/test_image_studio.py -q` passed,
+  30 tests. Live provider edit remains not run; this change does not identify
+  the user's specific upstream rejection without its response body.
+
+### Correction verification — prior snapshot before chained coverage
+
+- Prior focused suite: `uv run pytest tests/test_image_studio.py -q` passed,
+  30 tests.
+- Prior full suite: `uv run pytest -q` passed, 49 tests.
+- isort, Black, flake8, Ruff and `git diff --check`: passed.
+- No live provider evidence exists. App HTTP 502 alone does not identify the
+  upstream rejection cause; deployment and live edit checks remain not run.
+
+### Correction — chained edit regression coverage — 2026-11-24
+
+Coding goal: verify the reported flow where a second edit uses the image
+created by the first edit. Keep owner scoping, stored lineage and provider
+source bytes unchanged; change runtime code only if the focused test fails.
+
+- Added API regression coverage for generate → edit → edit. Tests verify the
+  second record points to first edit, first edited bytes become second provider
+  source, and second result is stored and readable.
+- Added an OpenAI-compatible transport test that checks second multipart
+  request carries prior PNG bytes, `image/png`, model, prompt and output format.
+- Focused `uv run pytest tests/test_image_studio.py -q`: passed, 32 tests.
+- Black and Ruff for changed test file: passed.
+- Chained offline flow passes. No runtime defect reproduced. Live provider edit
+  remains unrun; HTTP 502 still lacks upstream error fields.
+
+### Correction verification — chained edit coverage — 2026-11-24
+
+- Focused `uv run pytest tests/test_image_studio.py -q`: passed, 32 tests,
+  including two chained-edit tests.
+- Full `uv run pytest -q`: passed, 51 tests.
+- isort, Black, flake8, Ruff and `git diff --check`: passed.
+- Chained offline flow passes. No runtime defect reproduced. Live provider edit,
+  deployed health and deployment remain not run; HTTP 502 still lacks raw
+  upstream error fields.
+
+### Read-only deployed evidence — 2026-11-24
+
+- The running Compose stack is under `/Users/trieule/Work/visual-assistant`,
+  separate from this checkout. Its app and frontend are healthy, and local
+  `/api/health` returned HTTP 200. Public health was not observed because DNS
+  resolution failed from this environment. This checkout was not deployed.
+- A read-only SQLite metadata query found recent failed edits whose parent was
+  a successful edit. The latest parent was a 1536 × 1024 RGB PNG of 2,214,460
+  bytes. Provider model was `gpt-image-2.6-sunburst`; the stored failure was
+  the generic provider rejection. Earlier chained edits succeeded with
+  `gpt-image-2.5-sunburst`. This correlation does not establish a model defect.
+- The running container lacks the new HTTP-status fallback. It discards the
+  provider's structured error fields. No prompts, image bytes, credentials or
+  account identifiers were read for this inspection. A live edit was not run.
+
+### PR delivery checks — 2026-11-24
+
+- Focused image-studio suite: `uv run pytest tests/test_image_studio.py -q`
+  passed, 32 tests. Full `uv run pytest -q` passed, 51 tests.
+- isort, Black, flake8, Ruff and `git diff --check`: passed.
+- Frontend build first reported missing `node_modules`; `npm ci --offline`
+  completed, then `npm run build` passed.
+- `docker compose config --quiet` and publish-profile config validation passed.
+  Running local `/api/health` returned HTTP 200. Public DNS was not observed.
+- Live provider edit and deployment: not run. No live-provider success or
+  deployed-source claim follows from these checks.

@@ -179,20 +179,21 @@ def _rejection_message(response: httpx.Response) -> str:
     Provider messages can contain prompts, filenames, or other user/provider
     data. Never copy them into an API error or persisted operation record.
     """
+    status = response.status_code
     details = bytearray()
     for chunk in response.iter_bytes(chunk_size=65536):
         if len(details) + len(chunk) > MAX_PROVIDER_RESPONSE_BYTES:
-            return "Image provider rejected this prompt or source image."
+            return _generic_rejection_message(status)
         details.extend(chunk)
     try:
         payload = json.loads(details)
     except ValueError:
-        return "Image provider rejected this prompt or source image."
+        return _generic_rejection_message(status)
     if not isinstance(payload, dict):
-        return "Image provider rejected this prompt or source image."
+        return _generic_rejection_message(status)
     error = payload.get("error", payload)
     if not isinstance(error, dict):
-        return "Image provider rejected this prompt or source image."
+        return _generic_rejection_message(status)
     code = error.get("code")
     param = error.get("param")
     if isinstance(code, str) and code in _SOURCE_ERROR_CODES:
@@ -205,7 +206,22 @@ def _rejection_message(response: httpx.Response) -> str:
         return "Image provider rejected an unsupported image request parameter."
     if isinstance(code, str) and code == "content_policy_violation":
         return "Image provider rejected the prompt for safety reasons."
-    return "Image provider rejected this prompt or source image."
+    # Some compatible providers omit `code` and expose only a typed parameter.
+    # Parameter names are allow-listed so this never reflects provider text.
+    error_type = error.get("type")
+    if (
+        isinstance(error_type, str)
+        and error_type in {"invalid_request_error", "invalid_parameter_error"}
+        and isinstance(param, str)
+        and param in _SAFE_ERROR_PARAMS
+    ):
+        return f"Image provider rejected the '{param}' image parameter."
+    return _generic_rejection_message(status)
+
+
+def _generic_rejection_message(status: int) -> str:
+    """Include bounded transport context without exposing provider text."""
+    return "Image provider rejected this prompt or source image " f"(HTTP {status})."
 
 
 def _image_from_response(payload: dict[str, object]) -> GeneratedImage:
