@@ -13,6 +13,7 @@ type ImageRecord = {
   error?: string | null;
 };
 type View = "library" | "create" | "detail";
+type LibraryFilter = "all" | ImageRecord["status"];
 
 const errorMessages: Record<string, string> = {
   "An account with this email already exists.": "Email này đã có tài khoản. Hãy đăng nhập.",
@@ -93,6 +94,8 @@ function App() {
   const [completedCount, setCompletedCount] = useState(0);
   const [editPrompt, setEditPrompt] = useState("");
   const [variationPrompt, setVariationPrompt] = useState("");
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>("all");
   const sessionVersion = useRef(0);
   const loadVersion = useRef(0);
 
@@ -111,6 +114,14 @@ function App() {
         : [],
     [images, selected],
   );
+  const visibleImages = useMemo(() => {
+    const query = libraryQuery.trim().toLocaleLowerCase();
+    return images.filter((image) => {
+      const matchesQuery = !query || image.prompt.toLocaleLowerCase().includes(query);
+      const matchesFilter = libraryFilter === "all" || image.status === libraryFilter;
+      return matchesQuery && matchesFilter;
+    });
+  }, [images, libraryFilter, libraryQuery]);
 
   const loadImages = useCallback(async () => {
     const session = sessionVersion.current;
@@ -184,6 +195,8 @@ function App() {
     setWorking(false);
     setWorkingAction(null);
     setSelectedId(null);
+    setLibraryQuery("");
+    setLibraryFilter("all");
     setView("library");
   }
 
@@ -371,14 +384,21 @@ function App() {
               <div><p className="eyebrow">GÓC SÁNG TẠO CỦA BẠN</p><h1>Thư viện hình ảnh</h1><p className="subheading">Tất cả hình ảnh và ý tưởng của bạn, ở cùng một nơi.</p></div>
               <button className="button primary" onClick={() => { setView("create"); setError(""); }}>＋ Tạo hình ảnh mới</button>
             </div>
-            <div className="library-meta"><span>{images.filter((image) => image.status === "succeeded").length} tác phẩm</span><span className="sort-label">Mới nhất trước</span></div>
+            <div className="library-toolbar">
+              <div className="library-meta"><span>{images.filter((image) => image.status === "succeeded").length} tác phẩm</span><span className="sort-label">Mới nhất trước</span></div>
+              <p className="library-hint">Chọn một ảnh để xem prompt, chỉnh sửa hoặc tạo biến thể.</p>
+            </div>
+            <div className="library-filters" role="search" aria-label="Lọc thư viện ảnh">
+              <label className="library-search"><span className="visually-hidden">Tìm theo prompt</span><span aria-hidden="true">⌕</span><input aria-label="Tìm theo prompt" value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} placeholder="Tìm trong prompt…" type="search" /></label>
+              <label className="library-status-filter"><span className="visually-hidden">Lọc theo trạng thái</span><select aria-label="Lọc theo trạng thái" value={libraryFilter} onChange={(event) => setLibraryFilter(event.target.value as LibraryFilter)}><option value="all">Tất cả trạng thái</option><option value="succeeded">Hoàn tất</option><option value="processing">Đang xử lý</option><option value="failed">Thất bại</option></select></label>
+            </div>
             {loadingImages && !images.length ? <div className="loading-state" role="status"><span className="loader" />Đang tải thư viện…</div> : libraryError && !images.length ? (
               <div className="library-error" role="alert"><h2>Chưa tải được thư viện</h2><p>{libraryError}</p><button className="button secondary" onClick={() => void loadImages()}>Thử tải lại</button></div>
-            ) : images.length ? (
+            ) : images.length && visibleImages.length ? (
               <div className="image-grid">
-                {images.map((image, index) => <ImageCard key={image.id} image={image} index={index} onOpen={() => openDetail(image)} onDelete={() => void deleteImage(image)} disabled={working} />)}
+                {visibleImages.map((image, index) => <ImageCard key={image.id} image={image} index={index} onOpen={() => openDetail(image)} onDelete={() => void deleteImage(image)} disabled={working} />)}
               </div>
-            ) : <EmptyLibrary onCreate={() => setView("create")} />}
+            ) : images.length ? <div className="no-matches" role="status"><h2>Không tìm thấy ảnh phù hợp</h2><p>Thử từ khóa khác hoặc xóa bộ lọc để xem lại thư viện.</p><button className="button secondary" onClick={() => { setLibraryQuery(""); setLibraryFilter("all"); }}>Xóa bộ lọc</button></div> : <EmptyLibrary onCreate={() => setView("create")} />}
             {libraryError && images.length > 0 && <div className="library-retry" role="alert"><span>Chưa cập nhật được thư viện: {libraryError}</span><button className="button secondary" onClick={() => void loadImages()}>Thử lại</button></div>}
           </section>
         )}
@@ -389,16 +409,17 @@ function App() {
             <div className="create-layout">
               <div className="create-intro"><p className="eyebrow">BẮT ĐẦU TỪ Ý TƯỞNG</p><h1>Hãy tưởng tượng<br />điều gì đó.</h1><p>Bạn có thể mô tả bằng tiếng Việt. Hệ thống sẽ hiểu ý tưởng và diễn đạt lại thành hướng dẫn cho model tạo ảnh. Càng cụ thể về chủ thể, ánh sáng và cảm xúc, kết quả càng gần với hình dung của bạn.</p><div className="prompt-tip"><span>✳</span><p><strong>Mẹo nhỏ</strong><br />Nêu rõ chủ thể, bối cảnh, phong cách và ánh sáng để có kết quả tốt hơn.</p></div></div>
               <form className="prompt-card" onSubmit={createImage} aria-busy={working}>
-                <div className="prompt-card-head"><span className="card-step">01</span><span>HÌNH ẢNH MỚI</span><span className="prompt-count">{prompt.length} / 4.000</span></div>
+                <div className="prompt-card-head"><span className="card-step">01</span><div><span>HÌNH ẢNH MỚI</span><small>Viết ý tưởng bằng ngôn ngữ tự nhiên</small></div><span className="prompt-count">{prompt.length} / 4.000</span></div>
                 <label className="visually-hidden" htmlFor="new-prompt">Mô tả hình ảnh</label>
                 <textarea id="new-prompt" autoFocus maxLength={4000} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ví dụ: Một căn nhà nhỏ bên bờ biển lúc hoàng hôn, phong cách tranh màu nước…" required />
-                <label className="image-count-label" htmlFor="image-count">Số ảnh cần tạo
-                  <select id="image-count" value={imageCount} onChange={(event) => setImageCount(Number(event.target.value))} disabled={working}>
+                <div className="prompt-options">
+                  <label className="image-count-label" htmlFor="image-count"><span>Số ảnh cần tạo</span><select id="image-count" value={imageCount} onChange={(event) => setImageCount(Number(event.target.value))} disabled={working}>
                     {[1, 2, 3, 4, 5, 6].map((count) => <option key={count} value={count}>{count} ảnh</option>)}
-                  </select>
-                </label>
-                <div className="prompt-card-foot"><span>✧ Mô tả gốc được lưu cùng hình ảnh.</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
-                {working && <div className="progress-note" role="status">Đã xử lý {completedCount}/{imageCount} ảnh. Mỗi ảnh được lưu riêng; có thể mất vài phút.</div>}
+                  </select></label>
+                  <span className="prompt-save-note">✧ Prompt gốc được lưu cùng ảnh</span>
+                </div>
+                <div className="prompt-card-foot"><span>{working ? `Đang xử lý ${completedCount}/${imageCount} ảnh` : "Sẵn sàng tạo ảnh"}</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
+                {working && <><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={imageCount} aria-valuenow={completedCount}><span style={{ width: `${Math.round((completedCount / imageCount) * 100)}%` }} /></div><div className="progress-note" role="status">Đã xử lý {completedCount}/{imageCount} ảnh. Mỗi ảnh được lưu riêng; có thể mất vài phút.</div></>}
               </form>
             </div>
           </section>
@@ -418,8 +439,9 @@ function App() {
                 <div className="detail-facts"><div><span>Ngày tạo</span><strong>{formatDate(selected.created_at)}</strong></div><div><span>Định dạng</span><strong>{selected.mime_type?.replace("image/", "").toUpperCase() ?? "—"}</strong></div></div>
                 {selected.error && <p className="alert error" role="alert">{displayError(selected.error)}</p>}
                 {selected.parent_id && <div className="origin-note">↳ Ảnh này được tạo từ một ảnh nguồn.</div>}
-                <button className="button danger" type="button" disabled={working} onClick={() => void deleteImage(selected)}>Xóa ảnh</button>
+                <div className="detail-primary-actions"><button className="button danger" type="button" disabled={working} onClick={() => void deleteImage(selected)}>Xóa ảnh</button></div>
                 {selected.status === "succeeded" && <div className="actions-block">
+                  <div className="actions-heading"><span className="eyebrow">TIẾP TỤC TỪ ẢNH NÀY</span><p>Thử một hướng mới, giữ lại lịch sử gốc.</p></div>
                   <form className="action-form" onSubmit={(event) => void createDerived(event, "edit")}>
                     <label htmlFor="edit-prompt">Chỉnh sửa bằng prompt</label>
                     <textarea id="edit-prompt" maxLength={4000} value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="Ví dụ: Thêm những đám mây hồng ở phía chân trời…" required />
