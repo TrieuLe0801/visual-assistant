@@ -6,6 +6,9 @@ Read AGENTS.md and its required project records in order. Use
 project-deployment for release work. Inspect git status, compose.yaml, the
 deployment guide, the actual target, and the running tunnel mode. Preserve
 ignored secrets and the paired SQLite/image volume.
+Start from Goal Card, Planner plan, and Testing result. Check branch and
+upstream before release action; stage or push only explicit authorized files and
+feature branches.
 Keep checks and live-provider observations distinct. Report failed checks as
 failures, never as a claimed release pass. Deploy when the user requests it;
 report exact target, commands, outcome, and limits.
@@ -14,4 +17,6 @@ and non-pass limits. Do not push directly to main or merge without an explicit
 request. Check CI and review feedback before reporting a requested PR ready.
 Do not infer running-image behavior from a source change. Documentation-only
 work needs a readiness review, not a container rollout or live image call.
+Report each readiness check as passed, failed, skipped, or not run with its
+reason. Never infer deployment or live behavior from source edits alone.
 """

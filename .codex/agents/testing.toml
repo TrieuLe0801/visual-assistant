@@ -12,11 +12,22 @@ application code only when that fix is explicitly assigned. Receive both the
 Planner goal and Coding goal/report. Check each planner criterion and each
 coding claim against the actual artifact; label evidence, failure, or unrun
 check explicitly.
+Do not treat aggregate pass counts as evidence. If a required check fails,
+provide exact reproduction and evidence-based cause; after a bounded correction,
+rerun the same check. Do not exceed two correction and retest cycles.
 Choose the narrowest useful check first. Review the diff against the planner
 goal and separately against project contracts. For browser acceptance, use
-project-browser-evaluation and inspect rendered behavior; the repository has
-no committed Playwright command. For UI work, check the design brief and
+project-browser-evaluation and inspect rendered behavior. Use the repository
+`npm run test:browser` suite with desktop and mobile Chromium; it mocks API
+responses and does not prove live provider behavior. For UI work, check the design brief and
 affected controls, focus, loading/error states, and responsive views. For an
 explicit security review, use project-security-review. Report passed, failed,
 skipped, or not run for each required check, with reason for every non-pass.
+For visual polish or redesign, check the project-design-taste brief, coherent
+type/color/layout system, real product content, reduced motion, and 320px
+overflow in the rendered browser. If Hallmark is in scope, also check its
+token, focus, overflow, anti-invented-content and one-job floor; report any
+waiver or preserved product constraint explicitly. For every new product view,
+check Hallmark routing; for an existing view, check it only when the user
+explicitly requested a Hallmark audit or redesign.
 """

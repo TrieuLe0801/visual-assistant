@@ -11,6 +11,8 @@ This repository keeps its Codex development workflow in Git:
 | `.agents/skills/project-deployment/` | Release-specific checks for this single-host image studio |
 | `.agents/skills/requirement-clarification/` | Unresolved scope decisions and requested deep interviews |
 | `.agents/skills/project-ui/` | React interface brief and workflow preservation |
+| `.agents/skills/project-design-taste/` | Visual direction for polish/redesign |
+| `.agents/skills/project-hallmark/` | Explicit Hallmark direction, audit and redesign floor |
 | `.agents/skills/project-browser-evaluation/` | Observed browser and visual acceptance |
 | `.agents/skills/project-security-review/` | Explicit, scoped security reviews |
 | `.codex/hooks.json`, `.codex/hooks/format_python.py` | Python edit hook |
@@ -18,6 +20,10 @@ This repository keeps its Codex development workflow in Git:
 
 The primary session coordinates work; no separate manager agent is needed.
 For every repository change, `AGENTS.md` requires the `project-workflow` skill.
+Before role handoff, primary session records Goal Card with objective, user
+outcome, acceptance, scope/exclusions, verification, and explicit commit,
+push, or deploy intent. Missing intent means no such action. Preflight checks
+status, branch and upstream, and preserves unrelated dirty files.
 The primary session assigns the four roles in order: planner defines the goal
 and acceptance criteria; coding implements and reports against them; testing
 checks both the planned goal and coding result against the actual artifact;
@@ -31,8 +37,17 @@ the deployment skill holds release-specific checks. The planner handles the
 research and Goal Card work that the source project assigns to a separate
 researcher. The primary session owns integration, so no coordinator subagent is
 defined. `requirement-clarification`, `project-ui`, browser evaluation and
-security review route only when their task is in scope. This project has no
-committed Playwright command or Tailwind setup; use its actual React/CSS stack.
+security review route only when their task is in scope. This project has a
+repository Playwright suite (`npm run test:browser`) with desktop and mobile
+Chromium; it uses mocked APIs. Tailwind is not part of this React/CSS stack.
+Visual polish and redesign route through `project-design-taste`. Every new
+product view also routes through `project-hallmark`; existing views route
+through Hallmark only for an explicit Hallmark audit/redesign. Functional fixes
+and deployment do not. Hallmark remains a project adaptation and does not
+import upstream marketing-site scaffolds, themes or scripts.
+Testing labels every check passed, failed, skipped, or not run with a reason for
+non-pass results. Coding and testing may repeat at most two bounded correction
+cycles before the primary session reports a remaining blocker.
 
 For Codex configuration and custom-agent schema, see the [configuration
 reference](https://developers.openai.com/codex/config-reference/) and
@@ -48,7 +63,7 @@ reference](https://developers.openai.com/codex/config-reference/) and
    local Codex model catalog.
 3. Set up credentials in ignored local environment files. Do not transfer
    `.env`, personal Codex config, plugin cache, or credentials through Git.
-4. Check that Codex discovers the four agents and six repository skills. Run
+4. Check that Codex discovers the four agents and eight repository skills. Run
    the verification commands in `AGENTS.md`.
 
 Personal skills in `~/.agents/skills/` or `~/.codex/skills/`, including

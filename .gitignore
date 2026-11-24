@@ -9,6 +9,9 @@ __pycache__/
 htmlcov/
 .venv/
 node_modules/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
 
 # Secrets and local configuration
 .env

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:browser": "PW_DISABLE_TS_ESM=1 playwright test"
   },
   "dependencies": {
     "react": "19.3.1",
@@ -16,6 +17,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.2.1",
+    "@playwright/test": "1.52.0",
     "typescript": "7.0.2",
     "vite": "8.3.6"
   }

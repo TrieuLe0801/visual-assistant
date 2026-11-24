@@ -79,6 +79,10 @@ Before editing code or project decisions, read these files in order:
   `project-security-review` for explicit security reviews. The planner defines
   the UI brief; coding implements it; testing checks behavior and visuals.
   These are development skills, not application runtime agents.
+- Use `project-design-taste` for visual polish or redesign. Use
+  `project-hallmark` for every new product view and for existing-view Hallmark
+  audit/redesign requests named by the user. Hallmark does not replace product
+  workflow rules or import upstream marketing-site tooling.
 - Support Python `>=3.11`. Use `uv` for dependencies, environments and command
   execution. Commit `uv.lock` after dependency changes.
 - Use `pytest`, isort, Black, flake8 and Ruff for Python checks. Use TypeScript

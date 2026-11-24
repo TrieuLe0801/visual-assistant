@@ -3,6 +3,53 @@
 Date: 2026-11-08
 Status: Current
 
+## Hallmark and taste routing — 2026-11-23
+
+- Added project-local `project-hallmark`, adapted from `Nutlope/hallmark` v2.0.0
+  (MIT). It applies only to new views or explicit Hallmark audit/redesign
+  requests. It preserves the image-studio charter and omits upstream themes,
+  marketing scaffolds, Together AI calls, CSS stamps and `sloplint` dependency.
+- Routed Hallmark through `project-ui`, `project-design-taste`,
+  `project-browser-evaluation`, and planner/coding/testing agent instructions.
+  Taste remains default for ordinary visual polish. No runtime UI changed.
+- Installed upstream `hallmark` separately in `/Users/trieule/.codex/skills/`;
+  personal skills remain outside repository and become available next session.
+
+### Verification
+
+- `quick_validate.py` for `project-hallmark`, `project-ui`,
+  `project-design-taste` and `project-browser-evaluation`: passed.
+- Agent TOML parse and targeted source-reference checks: passed.
+- `git diff --check`: passed. Runtime, browser, provider and deployment checks:
+  N/A; this change only updates workflow instructions.
+
+- Correction cycle 1: aligned Hallmark routing so every new product view uses
+  Hallmark, while existing-view audit/redesign uses it only when explicitly
+  named. Replaced inaccurate Playwright availability wording with “repository
+  Playwright” wording. Targeted routing search, TOML parse and `git diff
+  --check` passed.
+
+## Commit and PR preparation — 2026-11-23
+
+- Fixed a malformed planner-agent instruction that split the repository
+  Playwright guidance after `Do not assume`.
+- Audited the 17 intended changed paths for scope, secrets, real user prompts,
+  and image files. No credentials, real prompts, or user images were found;
+  changes remain limited to workflow docs, skills, agents, Playwright setup and
+  deterministic browser tests.
+
+### Verification
+
+- Five project skills passed `quick_validate.py`; five TOML files (`config.toml`
+  and four agents) parsed successfully. `git diff --check`: passed.
+- `npm run build` and `npm run test:browser -- --workers=1` in `frontend/`:
+  passed; TypeScript/Vite build passed and 12 desktop/mobile Chromium tests
+  passed. API calls remain mocked, so provider and deployed behavior are not
+  proven.
+- `uv run pytest`: 42 passed. isort, Black, flake8 and Ruff checks passed.
+- Branch, commit, push and PR creation are handled by the primary session after
+  this correction. No deployment performed.
+
 ## UI visual refresh — 2026-11-23
 
 - Applied image-first gallery hierarchy (three-column desktop, two-column tablet/phone), larger readable typography, warmer surfaces, translucent navigation chrome, and clearer action contrast in `frontend/src/ux-polish.css`.
@@ -819,3 +866,101 @@ returned HTTP 200 after recreation.
   .codex/hooks/format_python.py`, and `npm run build` in `frontend/`: passed.
 - Browser, deployed-container, and live-provider checks: N/A for instruction
   and skill changes. No deployment or PR requested or performed.
+
+## Repository skill and agent refresh — 2026-11-23
+
+- Rechecked `/Users/trieule/Work/grounded-travel-planner/.codex` because the
+  requested `~/grounded-travel-planner/.codex` path is absent. Kept the Image
+  Studio adaptation: four agents and six project skills; no travel-specific
+  Auth0, PostgreSQL, Tavily, Tailwind or Playwright rules were copied.
+- Added Goal Card fields for scope, exclusions and commit/push/deploy intent;
+  status, branch and upstream preflight; bounded two-cycle correction loop; and
+  explicit non-pass reasons to project workflow, agent instructions and the
+  portable workflow guide. No application or architecture change.
+
+### Verification
+
+- `uv run --with PyYAML python /Users/trieule/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/project-workflow`: passed.
+- `uv run python` TOML parse of `.codex/config.toml` and four agent files: passed; roles are `planner`, `coding`, `testing`, `deploying` with models `gpt-6-sol`, `gpt-5.6-luna`, `gpt-5.6-luna`, `gpt-5.6-luna`.
+- Six project skill directories were present; source-term review found only explicit warnings that Tailwind/Playwright are unavailable, with no travel-product rules copied. `git diff --check`: passed.
+- `uv run pytest`: 42 passed. `uv run isort --check-only . .codex/hooks/format_python.py`: passed. `uv run black --check . .codex/hooks/format_python.py`: passed. `uv run flake8 . .codex/hooks/format_python.py`: passed. `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- An initial `npm run build` at the repository root failed because there is no
+  root `package.json`. `npm ci --offline` and `npm run build` in `frontend/`:
+  passed.
+- Browser, container and live-provider checks: N/A because this change only updates Codex instructions. No deployment or PR requested or performed.
+
+## Visual design taste skill — 2026-11-23
+
+- Added project-local `project-design-taste`, adapted from taste-skill 2.5.1
+  (MIT, Leonxlnx/taste-skill). It covers visual briefs, coherent typography,
+  color, layout, real product content, restrained motion and browser evidence.
+- Updated UI, browser, planner, coding and testing handoffs. The skill routes
+  only for visual polish or redesign; existing React/CSS, product charter,
+  image-library workflows and deployment boundaries remain authoritative.
+- Excluded source starter HTML, assets, scripts, finish gate, marketing layout
+  rules and company-site assumptions. No application redesign performed.
+- Installed the upstream `design-taste-frontend` skill from
+  `Leonxlnx/taste-skill` in the personal Codex skills directory. The repository
+  keeps its smaller Image Studio adaptation for portable agent handoffs.
+
+### Verification
+
+- `quick_validate.py` passed for `project-design-taste`, `project-ui` and
+  `project-browser-evaluation`.
+- Frontend build and browser runner checks remain recorded in this log; no live
+  provider or deployment check applies to this skill-only change.
+
+## Browser acceptance runner — 2026-11-23
+
+- Added locked `@playwright/test` dependency, `npm run test:browser`, dedicated
+  Vite web server on port 4173, desktop/mobile Chromium projects, and ignored
+  Playwright reports. Browser tests mock every `/api/**` route before page
+  navigation and abort unexpected requests.
+- Added deterministic coverage for disabled registration, login/library,
+  partial six-image creation, detail prompt/download, library retry, logout
+  clearing, and mobile overflow. Updated browser/UI skills with the real runner
+  and handoff rules.
+
+### Verification
+
+- `npm run build`: passed.
+- `npx playwright install chromium`: passed; Chromium downloaded.
+- `uv run --with PyYAML python .../quick_validate.py` for each changed skill:
+  passed.
+- Initial `npm run test:browser` worker discovery hung because Node 24 loaded
+  the TypeScript config through Playwright's experimental ESM restart and the
+  spec imported the `Page` type as a runtime export. The spec now uses a type-
+  only import and the script sets `PW_DISABLE_TS_ESM=1`.
+- `npm run test:browser -- --project=chromium-mobile --grep "mobile layout" --workers=1`:
+  passed (1 test at 320px viewport).
+- `npm run test:browser -- --workers=1`: passed (12 tests; desktop and mobile
+  Chromium). The suite starts Vite automatically on port 4173, mocks and
+  aborts unexpected `/api/**` calls, and checks mobile document overflow.
+- Corrected a strict locator failure in the six-image test by targeting the
+  submit button. Removed duplicate `@playwright/test` package keys and pinned
+  the package-lock entry. Backend proxy and live-provider checks: N/A.
+- Follow-up review found stale wording in `.codex/agents/planner.toml`,
+  `.codex/agents/coding.toml`, `.codex/agents/testing.toml` and
+  `docs/codex-workflow.md` that still says Playwright is absent. This is a
+  documentation consistency failure requiring a bounded instruction correction;
+  browser artifacts themselves pass.
+
+### Correction cycle 1
+
+- Replaced stale Playwright-absent wording with the repository
+  `npm run test:browser` desktop/mobile Chromium workflow. Kept Tailwind absent
+  and live-provider/deployed claims separate.
+- TOML parse, targeted wording search and `git diff --check`: passed.
+
+### Correction cycle 2
+
+- Corrected one remaining contradictory phrase in `docs/codex-workflow.md` to
+  state that the repository Playwright suite exists. Targeted search and
+  `git diff --check`: passed.
+
+### Correction cycle 3
+
+- Replaced the remaining Playwright availability wording in the testing agent
+  with “repository Playwright” and added explicit Hallmark routing for new
+  product views. TOML parse, targeted wording search and `git diff --check`:
+  passed.

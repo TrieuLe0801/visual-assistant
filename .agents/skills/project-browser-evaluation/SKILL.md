@@ -6,11 +6,15 @@ description: Evaluate Visual Assistant browser flows and responsive UI with obse
 # Project Browser Evaluation
 
 Read `AGENTS.md`, the planner goal, `docs/ui-plan.md`, and affected UI/API paths.
-Use an available browser automation tool for rendered checks. The frontend has
-`npm run build` but no committed Playwright dependency, browser test directory,
-or `test:browser` script; do not claim those checks exist. Add a browser test
-runner only when the requested acceptance justifies that dependency and the
-project adopts it.
+For visual polish or redesign, read `project-design-taste` and verify its brief
+against the rendered artifact. For every new product view, also read
+`project-hallmark`; for an existing view, read it only when user names a
+Hallmark audit/redesign, then check its floor and preserved product behavior.
+Use Playwright for deterministic rendered checks. Run `npm run test:browser`
+from `frontend/`; `playwright.config.ts` starts a dedicated Vite server on
+port 4173 and runs desktop and mobile Chromium projects. Tests route every
+`/api/**` request before navigation and abort unexpected calls, so browser
+checks do not require a backend, provider, credentials, or live data.
 
 For offline interaction checks, isolate test accounts and mock image providers
 or API responses. Exercise login, server-disabled registration, library and
@@ -18,6 +22,10 @@ detail navigation, create count, edit, variation, delete, download, and error
 recovery only as relevant to the change. Verify that success follows stored
 API output and an earlier session's response cannot repopulate a new session.
 Never treat a mocked provider result as live generation evidence.
+
+Keep mocks deterministic and complete. Add focused tests under
+`frontend/tests/browser/`; use role and label locators. A passing mocked browser
+test proves UI behavior only, not backend isolation or provider quality.
 
 For visual work, inspect rendered states at representative phone, tablet and
 desktop widths. Compare matching before/after states when a baseline exists.

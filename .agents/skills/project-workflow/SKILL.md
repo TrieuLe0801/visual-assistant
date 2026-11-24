@@ -9,6 +9,12 @@ Use this workflow for every requested repository change: feature work, bug
 fixes, refactors, configuration, documentation, and product behavior. Do not
 use it for pure questions or status explanations that do not change files.
 
+Before handoff, primary session records a compact Goal Card: objective, user
+outcome, acceptance criteria, scope and exclusions, verification, and explicit
+commit/push/deploy intent. Missing product decisions go through
+`requirement-clarification`; absent commit or push intent means no commit or
+push.
+
 The primary Codex session coordinates four project agents in this order:
 
 1. `planner` reads the required project records and current worktree, then
@@ -38,6 +44,10 @@ declare completion until the artifact, verification result, and required project
 records are updated. Keep offline tests, deployed health checks, and live model
 checks separate.
 
+Run preflight before edits: inspect `git status --short`, branch and upstream,
+then identify unrelated dirty files. Preserve them. Allow at most two bounded
+coding correction and testing retest cycles; report any remaining blocker.
+
 Trace defects through the affected path and confirm a focused failure before a
 fix when reproducible. Reuse existing code and installed tools before adding
 dependencies or layers. Preserve validation, owner isolation, data-loss
@@ -56,6 +66,11 @@ Use these labels so later agents can audit the chain:
   commands, failures, and unrun checks.
 - `Deployment readiness`: target, backup/rollback, configuration and health
   evidence, release blockers, and whether deployment was authorized.
+
+Every check report marks `passed`, `failed`, `skipped`, or `not run`, with a
+reason for each non-pass result. Review final diff against Goal Card and project
+contracts. Stage or commit only explicit files when authorized; push only an
+authorized feature branch after required checks pass.
 
 The skill is implicitly discoverable. `AGENTS.md` makes this sequence mandatory
 for repository changes even when automatic skill selection is unavailable.
