@@ -24,9 +24,9 @@ from image_studio.storage import LocalImageStorage, StoredImage
 from image_studio.utils.image import MAX_IMAGE_BYTES, ImageStorageError
 
 
-def _one_pixel_png() -> bytes:
+def _one_pixel_png(color: tuple[int, int, int, int] = (18, 52, 86, 255)) -> bytes:
     buffer = BytesIO()
-    Image.new("RGBA", (1, 1), (18, 52, 86, 255)).save(buffer, format="PNG")
+    Image.new("RGBA", (1, 1), color).save(buffer, format="PNG")
     return buffer.getvalue()
 
 
@@ -232,6 +232,100 @@ def test_edit_and_variation_keep_source_relationship_and_prompt(
     assert variation.json()["operation"] == "variation"
     assert variation.json()["prompt"] == "Tạo một biến thể khác biệt từ ảnh gốc."
     assert fake_provider.calls[-1][0] == "variation"
+
+
+def test_edit_can_chain_from_previous_derived_image(
+    client: TestClient, fake_provider: FakeProvider
+) -> None:
+    register(client, "chain@example.com")
+    original = client.post("/api/images/generate", json={"prompt": "A mountain"}).json()
+
+    first_result = _one_pixel_png((200, 40, 80, 255))
+    fake_provider.image_data = first_result
+    first_edit = client.post(
+        f"/api/images/{original['id']}/edit",
+        json={"prompt": "Add a red moon"},
+    )
+    assert first_edit.status_code == 201
+    first_record = first_edit.json()
+    assert first_record["parent_id"] == original["id"]
+    assert client.get(first_record["file_url"]).content == first_result
+
+    second_result = _one_pixel_png((20, 160, 90, 255))
+    fake_provider.image_data = second_result
+    second_edit = client.post(
+        f"/api/images/{first_record['id']}/edit",
+        json={"prompt": "Make the sky green"},
+    )
+    assert second_edit.status_code == 201
+    second_record = second_edit.json()
+    assert second_record["parent_id"] == first_record["id"]
+    assert client.get(second_record["file_url"]).content == second_result
+    assert fake_provider.calls[-1] == ("edit", "Make the sky green", first_result)
+
+
+def test_openai_adapter_chained_edit_sends_previous_png_as_multipart_source(
+    tmp_path: Path,
+) -> None:
+    requests: list[httpx.Request] = []
+    original_result = _one_pixel_png((18, 52, 86, 255))
+    first_result = _one_pixel_png((200, 40, 80, 255))
+    second_result = _one_pixel_png((20, 160, 90, 255))
+    responses = [original_result, first_result, second_result]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        index = len(requests) - 1
+        return httpx.Response(
+            200,
+            json={"data": [{"b64_json": base64.b64encode(responses[index]).decode()}]},
+            request=request,
+        )
+
+    settings = make_settings(
+        database_path=tmp_path / "chained-edit.sqlite3",
+        image_storage_path=tmp_path / "chained-edit-images",
+        frontend_dist_path=tmp_path / "frontend-dist",
+    )
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(respond),
+    )
+    try:
+        with TestClient(
+            create_app(settings=settings, provider=provider)
+        ) as test_client:
+            register(test_client, "adapter-chain@example.com")
+            original = test_client.post(
+                "/api/images/generate", json={"prompt": "A mountain"}
+            ).json()
+            first = test_client.post(
+                f"/api/images/{original['id']}/edit",
+                json={"prompt": "Add a red moon"},
+            ).json()
+            second = test_client.post(
+                f"/api/images/{first['id']}/edit",
+                json={"prompt": "Make the sky green"},
+            ).json()
+
+            assert first["parent_id"] == original["id"]
+            assert second["parent_id"] == first["id"]
+            assert len(requests) == 3
+            second_request = requests[2]
+            body = second_request.content
+            assert second_request.headers["content-type"].startswith(
+                "multipart/form-data;"
+            )
+            assert b'filename="source.png"' in body
+            assert b"Content-Type: image/png" in body
+            assert b"model" in body and b"test-model" in body
+            assert b"prompt" in body and b"Make the sky green" in body
+            assert b"output_format" in body and b"png" in body
+            assert first_result in body
+    finally:
+        provider.close()
 
 
 def test_other_user_cannot_list_read_edit_or_download_images(
@@ -705,5 +799,53 @@ def test_adapter_keeps_generic_message_for_unknown_rejection() -> None:
         ) as raised:
             provider.edit("Make it blue", PNG_BYTES, "image/png")
         assert "private" not in str(raised.value)
+    finally:
+        provider.close()
+
+
+def test_adapter_maps_typed_rejection_without_code_safely() -> None:
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "type": "invalid_request_error",
+                        "param": "image",
+                        "message": "private source details",
+                    }
+                },
+                request=request,
+            )
+        ),
+    )
+    try:
+        with pytest.raises(
+            ImageProviderError, match="'image' image parameter"
+        ) as raised:
+            provider.edit("Make it blue", PNG_BYTES, "image/png")
+        assert "private" not in str(raised.value)
+    finally:
+        provider.close()
+
+
+def test_adapter_includes_status_for_unstructured_rejection() -> None:
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                422, text="upstream details", request=request
+            )
+        ),
+    )
+    try:
+        with pytest.raises(ImageProviderError, match="HTTP 422") as raised:
+            provider.edit("Make it blue", PNG_BYTES, "image/png")
+        assert "upstream details" not in str(raised.value)
     finally:
         provider.close()
