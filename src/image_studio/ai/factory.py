@@ -53,6 +53,7 @@ def build_prompt_enhancer(settings: Settings) -> OpenAICompatiblePromptEnhancer:
         base_url=model.api_base_url,
         api_key=model.api_key,
         model=model.model_name,
+        provider_name=model.provider_name,
         timeout_seconds=model.timeout_seconds,
     )
 

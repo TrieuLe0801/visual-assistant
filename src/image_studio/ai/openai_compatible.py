@@ -250,4 +250,38 @@ def _image_from_response(payload: dict[str, object]) -> GeneratedImage:
         raise ImageProviderError(
             "Image provider returned invalid base64 image data."
         ) from exc
-    return GeneratedImage(data=data, mime_type=mime_type)
+    return GeneratedImage(
+        data=data,
+        mime_type=mime_type,
+        usage_metadata=_usage_metadata(payload.get("usage")),
+    )
+
+
+def _usage_metadata(value: object) -> dict[str, int] | None:
+    """Keep provider-reported non-negative token counts only."""
+    if not isinstance(value, dict):
+        return None
+    aliases = {
+        "input_tokens": ("input_tokens", "prompt_tokens"),
+        "output_tokens": ("output_tokens", "completion_tokens"),
+        "total_tokens": ("total_tokens",),
+    }
+    fields: dict[str, int] = {}
+    for target, candidates in aliases.items():
+        for candidate in candidates:
+            candidate_value = value.get(candidate)
+            if (
+                isinstance(candidate_value, int)
+                and not isinstance(candidate_value, bool)
+                and candidate_value >= 0
+            ):
+                fields[target] = candidate_value
+                break
+    if not fields:
+        return None
+    if (
+        "total_tokens" not in fields
+        and {"input_tokens", "output_tokens"} <= fields.keys()
+    ):
+        fields["total_tokens"] = fields["input_tokens"] + fields["output_tokens"]
+    return fields

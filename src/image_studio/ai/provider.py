@@ -16,6 +16,7 @@ class UnsupportedImageOperation(ImageProviderError):
 class GeneratedImage:
     data: bytes
     mime_type: str
+    usage_metadata: dict[str, int] | None = None
 
 
 class ImageProvider(Protocol):

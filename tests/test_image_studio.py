@@ -328,6 +328,40 @@ def test_openai_adapter_chained_edit_sends_previous_png_as_multipart_source(
         provider.close()
 
 
+@pytest.mark.parametrize(
+    "usage, expected",
+    [
+        (
+            {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
+            {"input_tokens": 5, "output_tokens": 3, "total_tokens": 8},
+        ),
+        ({"prompt_tokens": "5", "completion_tokens": -1}, None),
+        (None, None),
+    ],
+)
+def test_openai_adapter_keeps_only_valid_image_usage(
+    usage: dict[str, object] | None, expected: dict[str, int] | None
+) -> None:
+    response_payload: dict[str, object] = {
+        "data": [{"b64_json": base64.b64encode(PNG_BYTES).decode()}]
+    }
+    if usage is not None:
+        response_payload["usage"] = usage
+
+    provider = OpenAICompatibleProvider(
+        base_url="http://images.internal/v1",
+        api_key=None,
+        model="test-model",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=response_payload, request=request)
+        ),
+    )
+    try:
+        assert provider.generate("safe prompt").usage_metadata == expected
+    finally:
+        provider.close()
+
+
 def test_other_user_cannot_list_read_edit_or_download_images(
     client: TestClient,
 ) -> None:

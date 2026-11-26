@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-23
+Last updated: 2026-11-26
 
 ## Current milestone
 
@@ -62,6 +62,11 @@ planner completion counts carry forward.
   and reusable security/image/time utilities without changing API routes.
 - Added server-selected LangChain Core model routing and metadata-only LangSmith
   operation traces; see [ADR 0006](docs/adr/0006-langchain-model-routing-langsmith-tracing.md).
+- Added nested metadata-only LangSmith `llm` traces for prompt interpretation and
+  image-provider calls. Valid provider token usage is forwarded when returned;
+  missing or malformed usage stays absent. A read-only query of the deployed
+  project confirmed prior traces were chain-only with zero token usage; this
+  checkout was not deployed.
 - Added server-side Vietnamese prompt interpretation for generation, editing and
   variations; the library retains the user's original text. See
   [ADR 0008](docs/adr/0008-vietnamese-prompt-interpretation.md).

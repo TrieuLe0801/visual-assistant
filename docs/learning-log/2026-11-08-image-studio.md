@@ -3,6 +3,42 @@
 Date: 2026-11-08
 Status: Current
 
+## LangSmith token and I/O telemetry — 2026-11-26
+
+- Traced missing session tokens to image operations being `chain` runs, the
+  model router disabling child tracing, and prompt-model HTTP responses being
+  read without their `usage` fields.
+- Added nested metadata-only `llm` runs for prompt interpretation and image
+  provider calls. Inputs expose operation/source presence only; outputs expose
+  success/output presence and validated provider token counts. Prompt text,
+  rewritten text, image bytes, owner IDs and credentials remain excluded.
+- Provider usage accepts standard `input_tokens`/`output_tokens` or OpenAI
+  `prompt_tokens`/`completion_tokens`; invalid counts are omitted and totals are
+  derived only when both component counts exist.
+
+Verification:
+
+- `uv run pytest tests/test_image_studio.py tests/test_model_routing.py tests/test_prompt_enhancer.py -q`: passed, 45 tests.
+- Black, Ruff and `git diff --check`: passed.
+- Read-only LangSmith query of deployed project: prior 10 runs were all
+  `chain image_studio.operation` with sanitized input/output keys and no token
+  usage. This checkout was not deployed; remote delivery after this change is
+  not verified.
+
+Correction cycle 2 verification:
+
+- Full `uv run pytest -q`: passed, 55 tests.
+- `uv run isort --check-only . .codex/hooks/format_python.py`: passed.
+- `uv run black --check . .codex/hooks/format_python.py`: passed.
+- `uv run flake8 . .codex/hooks/format_python.py`: passed.
+- `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- `git diff --check`: passed.
+- In `frontend/`, `npm ci --offline`: passed; `npm run build`: passed.
+- Browser suite, live provider, and post-patch remote LangSmith delivery: not
+  run. Deployed target still has pre-patch source; no deployment occurred.
+- Provider child success means the provider call returned `GeneratedImage`.
+  Parent operation determines final success after validation and storage.
+
 ## Hallmark and taste routing — 2026-11-23
 
 - Added project-local `project-hallmark`, adapted from `Nutlope/hallmark` v2.0.0
