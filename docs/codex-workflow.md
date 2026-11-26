@@ -6,15 +6,13 @@ This repository keeps its Codex development workflow in Git:
 |---|---|
 | `AGENTS.md` | Project rules and required reading |
 | `.codex/config.toml` | Coordinator model and agent concurrency |
-| `.codex/agents/*.toml` | Planner, coding, testing, and deployment roles with model assignments |
-| `.agents/skills/project-workflow/` | Required planner, coding, testing, and release-readiness flow for repository changes |
+| `.codex/agents/*.toml` | Researcher, planner, coding, testing, and deployment roles with model assignments |
+| `.agents/skills/project-workflow/` | Required research, planning, coding, testing, and release-readiness flow for repository changes |
 | `.agents/skills/project-deployment/` | Release-specific checks for this single-host image studio |
-| `.agents/skills/requirement-clarification/` | Unresolved scope decisions and requested deep interviews |
 | `.agents/skills/project-ui/` | React interface brief and workflow preservation |
 | `.agents/skills/project-design-taste/` | Visual direction for polish/redesign |
 | `.agents/skills/project-hallmark/` | Explicit Hallmark direction, audit and redesign floor |
 | `.agents/skills/project-browser-evaluation/` | Observed browser and visual acceptance |
-| `.agents/skills/project-security-review/` | Explicit, scoped security reviews |
 | `.codex/hooks.json`, `.codex/hooks/format_python.py` | Python edit hook |
 | `pyproject.toml`, `uv.lock` | Development tools and locked dependencies |
 
@@ -24,20 +22,24 @@ Before role handoff, primary session records Goal Card with objective, user
 outcome, acceptance, scope/exclusions, verification, and explicit commit,
 push, or deploy intent. Missing intent means no such action. Preflight checks
 status, branch and upstream, and preserves unrelated dirty files.
-The primary session assigns the four roles in order: planner defines the goal
+The primary session assigns five roles in order: researcher surveys evidence and
+options; planner defines the goal
 and acceptance criteria; coding implements and reports against them; testing
 checks both the planned goal and coding result against the actual artifact;
 deploying reviews release readiness using `project-deployment`. Deployment
 itself occurs only when the user requests it. Pure questions do not start this
 workflow.
 Development agents are separate from the app's image-provider adapters. The
-coordinator and planner use `gpt-6-sol`. Coding, testing, and deployment use
+coordinator, researcher and planner use `gpt-6-sol`. Coding, testing, and deployment use
 `gpt-5.6-luna`. `AGENTS.md` holds the verification sequence and evidence rules;
-the deployment skill holds release-specific checks. The planner handles the
-research and Goal Card work that the source project assigns to a separate
-researcher. The primary session owns integration, so no coordinator subagent is
-defined. `requirement-clarification`, `project-ui`, browser evaluation and
-security review route only when their task is in scope. This project has a
+the deployment skill holds release-specific checks. The primary session owns
+the Goal Card. The researcher handles evidence and options; planner consumes
+the Research result and owns the implementation plan, researching only material
+evidence gaps. The primary session owns integration, so no coordinator
+subagent is defined.
+Decision gaps route to the primary session; security reviews inspect
+authentication, owner isolation, secrets, validation, storage, and logging
+boundaries when in scope. This project has a
 repository Playwright suite (`npm run test:browser`) with desktop and mobile
 Chromium; it uses mocked APIs. Tailwind is not part of this React/CSS stack.
 Visual polish and redesign route through `project-design-taste`. Every new
@@ -63,7 +65,7 @@ reference](https://developers.openai.com/codex/config-reference/) and
    local Codex model catalog.
 3. Set up credentials in ignored local environment files. Do not transfer
    `.env`, personal Codex config, plugin cache, or credentials through Git.
-4. Check that Codex discovers the four agents and eight repository skills. Run
+4. Check that Codex discovers the five agents and six repository skills. Run
    the verification commands in `AGENTS.md`.
 
 Personal skills in `~/.agents/skills/` or `~/.codex/skills/`, including

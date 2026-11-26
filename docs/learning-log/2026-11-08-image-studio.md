@@ -1,7 +1,79 @@
 # Learning Log — AI image studio MVP
 
+## Research-first workflow and skill pruning — 2026-11-26
+
+- Added project `researcher` before `planner`. Researcher records repository and
+  primary-source evidence, compares options, recommends an approach, and hands
+  off assumptions, risks, unresolved decisions, and evidence limits. Planner now
+  consumes that Research result before defining implementation scope.
+- Removed repository `requirement-clarification` and `project-security-review`
+  after no recorded execution in project logs. Decision-gap handling and
+  security-boundary review rules remain in `AGENTS.md` and `project-workflow`.
+- Retained six active skills and the existing coding, testing, and deployment
+  roles. No application, dependency, provider, or deployment behavior changed.
+
+Verification: five agent TOMLs and workflow YAML parsed; six active skills and
+five agents counted; changed `project-workflow` passed `quick_validate.py`.
+Active-reference audit and `git diff --check` passed. `uv run pytest -q` passed
+with 55 tests; isort, Black, flake8 and Ruff passed. The first frontend build
+attempt failed because `tsc` was absent. `npm ci --offline` then `npm run build`
+passed. Both Compose config profiles passed. Browser, live provider, health,
+backup restore and rollout checks were not run for these workflow-only edits.
+No deployment was requested or performed.
+
+Pre-PR verification of the combined workflow and LangSmith changes: `uv run
+pytest tests/test_image_studio.py tests/test_model_routing.py
+tests/test_prompt_enhancer.py -q` passed (45 tests); `uv run pytest -q` passed
+(55 tests). Standard isort, Black, flake8 and Ruff checks, frontend `npm run
+build`, five agent TOML parses, workflow YAML parse, skill validation, active
+reference scan and `git diff --check` passed. The changed-path audit found no
+credential, real user prompt or image file. Live LangSmith delivery, live
+provider, browser E2E and deployment checks were not run. The first build
+command from the repository root found no `package.json`; running it from
+`frontend/` passed.
+
+Correction cycle 1: clarified that the primary session owns the Goal Card,
+planner owns the implementation plan, and planner researches only material
+evidence gaps after consuming Research result. No application files changed.
+
 Date: 2026-11-08
 Status: Current
+
+## LangSmith token and I/O telemetry — 2026-11-26
+
+- Traced missing session tokens to image operations being `chain` runs, the
+  model router disabling child tracing, and prompt-model HTTP responses being
+  read without their `usage` fields.
+- Added nested metadata-only `llm` runs for prompt interpretation and image
+  provider calls. Inputs expose operation/source presence only; outputs expose
+  success/output presence and validated provider token counts. Prompt text,
+  rewritten text, image bytes, owner IDs and credentials remain excluded.
+- Provider usage accepts standard `input_tokens`/`output_tokens` or OpenAI
+  `prompt_tokens`/`completion_tokens`; invalid counts are omitted and totals are
+  derived only when both component counts exist.
+
+Verification:
+
+- `uv run pytest tests/test_image_studio.py tests/test_model_routing.py tests/test_prompt_enhancer.py -q`: passed, 45 tests.
+- Black, Ruff and `git diff --check`: passed.
+- Read-only LangSmith query of deployed project: prior 10 runs were all
+  `chain image_studio.operation` with sanitized input/output keys and no token
+  usage. This checkout was not deployed; remote delivery after this change is
+  not verified.
+
+Correction cycle 2 verification:
+
+- Full `uv run pytest -q`: passed, 55 tests.
+- `uv run isort --check-only . .codex/hooks/format_python.py`: passed.
+- `uv run black --check . .codex/hooks/format_python.py`: passed.
+- `uv run flake8 . .codex/hooks/format_python.py`: passed.
+- `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- `git diff --check`: passed.
+- In `frontend/`, `npm ci --offline`: passed; `npm run build`: passed.
+- Browser suite, live provider, and post-patch remote LangSmith delivery: not
+  run. Deployed target still has pre-patch source; no deployment occurred.
+- Provider child success means the provider call returned `GeneratedImage`.
+  Parent operation determines final success after validation and storage.
 
 ## Hallmark and taste routing — 2026-11-23
 

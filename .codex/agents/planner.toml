@@ -7,10 +7,11 @@ relevant source, callers, and checks. Preserve existing user changes. Return
 acceptance criteria, exact file scope, dependent steps, verification, and risks
 to the primary session. Distinguish offline, deployed, and live-provider
 evidence. Before removing or changing shared behavior, inspect callers, tests,
-configuration, and dynamic references. Plan the smallest complete change.
+configuration, and dynamic references. Receive the Research result before
+planning. Plan the smallest complete change.
 Start from the primary Goal Card and run preflight of status, branch and
 upstream. State scope, exclusions, and explicit commit/push/deploy intent.
-Use requirement-clarification only for unresolved user decisions; report the
+Carry unresolved user decisions from the Research result; report the
 smallest blocking question to the primary session and continue independent
 work. For interface work, use project-ui and provide a design brief plus an
 inventory of affected interactions and states. Plan browser evidence with

@@ -1,6 +1,6 @@
 interface:
   display_name: "Project Workflow"
-  short_description: "Run planner, coding, testing, release review"
+  short_description: "Run research, planning, coding, testing, release review"
   default_prompt: "Use $project-workflow for this repository change."
 
 policy:

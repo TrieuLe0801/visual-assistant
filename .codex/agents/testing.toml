@@ -8,7 +8,8 @@ and product charter. Use isolated data and fake providers for offline tests;
 keep live model calls separate. Do not alter assertions or hardcode fixtures
 merely to hide a failure. Diagnose environment-dependent failures and report
 the reproduction, affected behavior, exact commands, and unrun checks. Change
-application code only when that fix is explicitly assigned. Receive both the
+application code only when that fix is explicitly assigned. Receive the Research
+result and both the
 Planner goal and Coding goal/report. Check each planner criterion and each
 coding claim against the actual artifact; label evidence, failure, or unrun
 check explicitly.
@@ -21,7 +22,8 @@ project-browser-evaluation and inspect rendered behavior. Use the repository
 `npm run test:browser` suite with desktop and mobile Chromium; it mocks API
 responses and does not prove live provider behavior. For UI work, check the design brief and
 affected controls, focus, loading/error states, and responsive views. For an
-explicit security review, use project-security-review. Report passed, failed,
+explicit security review, inspect authentication, owner isolation, secrets,
+validation, storage and logging boundaries. Report passed, failed,
 skipped, or not run for each required check, with reason for every non-pass.
 For visual polish or redesign, check the project-design-taste brief, coherent
 type/color/layout system, real product content, reduced motion, and 320px

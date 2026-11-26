@@ -23,6 +23,9 @@ must not copy private prompts or image bytes to an observability service.
 - Use LangSmith `@traceable` for the complete image operation. Record operation,
   source presence, result status, record ID, provider and model. Remove prompt,
   source bytes, result bytes, owner ID and credentials from trace inputs/outputs.
+- Trace prompt interpretation and image-provider calls as nested `llm` runs with
+  the same metadata-only input/output boundary. Forward provider-reported token
+  usage when present; omit usage when a compatible endpoint does not return it.
 - Disable automatic LangChain runnable tracing around image calls to prevent
   a child run from capturing raw image data. LangSmith remains opt-in through
   `LANGSMITH_TRACING` and `LANGSMITH_API_KEY`.
@@ -45,7 +48,9 @@ must not copy private prompts or image bytes to an observability service.
 - Model switching needs a backend restart, so in-flight requests continue on
   the previous instance until it stops.
 - Metadata-only traces cannot be used to inspect prompt quality or image
-  content. Failed operations still retain the safe error and status in SQLite.
+  content. Token and cost views depend on provider usage fields; compatible
+  endpoints that omit usage remain uncounted. Failed operations still retain
+  the safe error and status in SQLite.
 - Live image-provider and LangSmith delivery checks require credentials and
   endpoints; offline tests do not prove remote behavior.
 

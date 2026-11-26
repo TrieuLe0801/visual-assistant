@@ -108,3 +108,17 @@ authorize deployment; rollout still requires the user's request.
 
 This replaces the earlier discretionary delegation rule for repository changes.
 Pure questions and status requests do not require the four-role workflow.
+
+## Research-first workflow amendment — 2026-11-26
+
+Add a `researcher` role before `planner`. Researcher surveys repository and
+primary-source evidence, compares options, recommends an approach, and records
+assumptions, risks, unresolved decisions, and evidence limits without editing.
+Planner consumes that Research result and owns implementation scope, acceptance
+criteria, checks, and risks. The active sequence is researcher, planner,
+coding, testing, deploying.
+
+Remove the low-use repository `requirement-clarification` and
+`project-security-review` skills. Decision-gap handling and security-boundary
+review rules remain in the workflow and project instructions. Keep six active
+skills and the four existing implementation/release roles alongside researcher.

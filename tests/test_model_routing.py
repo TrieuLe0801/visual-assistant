@@ -212,7 +212,14 @@ def test_langsmith_trace_excludes_prompt_source_and_image_bytes(
 
     assert result is not None and result.status == "succeeded"
     assert edited is not None and edited.status == "succeeded"
-    assert len(captured) == 3
+    assert len(captured) == 6
+    provider_traces = [
+        trace for trace in captured if trace.name == "image_provider.operation"
+    ]
+    operation_traces = [
+        trace for trace in captured if trace.name == "image_studio.operation"
+    ]
+    assert len(provider_traces) == len(operation_traces) == 3
     data = json.dumps(
         [{"inputs": trace.inputs, "outputs": trace.outputs} for trace in captured]
     )
@@ -222,6 +229,6 @@ def test_langsmith_trace_excludes_prompt_source_and_image_bytes(
     assert "private failure marker" not in data
     assert "test@example.com" not in data
     assert "safe-model" in data
-    assert captured[0].inputs == {"operation": "generate", "has_source": False}
-    assert captured[1].inputs == {"operation": "edit", "has_source": True}
-    assert captured[2].extra["metadata"]["status"] == "failed"
+    assert operation_traces[0].inputs == {"operation": "generate", "has_source": False}
+    assert operation_traces[1].inputs == {"operation": "edit", "has_source": True}
+    assert operation_traces[2].extra["metadata"]["status"] == "failed"
