@@ -1,6 +1,6 @@
 ---
 name: project-workflow
-description: Coordinate every repository change through planner, coding, testing, and deployment-readiness agents; use for feature, code, configuration, documentation, and product-behavior work.
+description: Coordinate every repository change through research, planning, coding, testing, and deployment-readiness agents; use for feature, code, configuration, documentation, and product-behavior work.
 ---
 
 # Project Workflow
@@ -11,29 +11,34 @@ use it for pure questions or status explanations that do not change files.
 
 Before handoff, primary session records a compact Goal Card: objective, user
 outcome, acceptance criteria, scope and exclusions, verification, and explicit
-commit/push/deploy intent. Missing product decisions go through
-`requirement-clarification`; absent commit or push intent means no commit or
+commit/push/deploy intent. Missing product decisions are recorded as unresolved
+decisions for the primary session to ask; absent commit or push intent means no commit or
 push.
 
-The primary Codex session coordinates four project agents in this order:
+The primary Codex session coordinates five project agents in this order:
 
-1. `planner` reads the required project records and current worktree, then
-   defines one structured goal. Include acceptance criteria, owned file scope,
-   dependencies, checks, evidence boundaries, and risks. Research callers and
-   existing behavior before choosing scope. For UI work, include a design brief
-   and interaction inventory using `project-ui`. If a user decision blocks
-   acceptance, use `requirement-clarification`; continue independent work.
+1. `researcher` reads required records and current worktree, surveys relevant
+   code and primary sources when useful, compares options, recommends an
+   approach, and reports evidence, assumptions, risks, and unresolved decisions.
+   Researcher does not edit.
+2. `planner` consumes the Research result and reads the required project records
+   and current worktree, then defines one implementation plan. Use the Research
+   result as source of evidence; research only material evidence gaps. Include
+   acceptance criteria, owned file scope, dependencies, checks, evidence
+   boundaries, and risks. For UI work, include a design brief and interaction
+   inventory using `project-ui`. If a user decision blocks acceptance, carry it
+   into the handoff and ask the primary session; continue independent work.
    Planner does not edit.
-2. `coding` receives the planner goal and owns the implementation scope. It
+3. `coding` receives the Research result and planner goal and owns the implementation scope. It
    preserves existing user changes, records a coding goal, maps each planned
    criterion to achieved, partial, or blocked, and reports changed files and
    checks. It does not broaden scope silently.
-3. `testing` receives both planner's goal and coding's report. It checks the
+4. `testing` receives the Research result, planner goal and coding's report. It checks the
    actual artifact against every acceptance criterion and coding claim, runs
    deterministic relevant checks, and reports failures with reproduction steps.
    For browser acceptance, use `project-browser-evaluation`. It must not weaken
    tests or invent live-provider evidence.
-4. `deploying` uses `project-deployment` to review release readiness, rollback,
+5. `deploying` uses `project-deployment` to review release readiness, rollback,
    secrets, storage, health, and live-evidence limits. It may prepare release
    steps, but deploys only when the user explicitly requests deployment.
 
@@ -60,6 +65,8 @@ provider checks. Do not create a platform Goal for routine repository work.
 
 Use these labels so later agents can audit the chain:
 
+- `Research result`: evidence, options, recommendation, assumptions, risks,
+  unresolved decisions, and evidence limits.
 - `Planner goal`: outcome, acceptance criteria, file scope, checks, risks.
 - `Coding goal`: implementation outcome and status for each planner criterion.
 - `Testing result`: evidence for each planner criterion and coding claim,

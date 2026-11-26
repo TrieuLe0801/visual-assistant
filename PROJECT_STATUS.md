@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-23
+Last updated: 2026-11-26
 
 ## Current milestone
 
@@ -62,6 +62,11 @@ planner completion counts carry forward.
   and reusable security/image/time utilities without changing API routes.
 - Added server-selected LangChain Core model routing and metadata-only LangSmith
   operation traces; see [ADR 0006](docs/adr/0006-langchain-model-routing-langsmith-tracing.md).
+- Added nested metadata-only LangSmith `llm` traces for prompt interpretation and
+  image-provider calls. Valid provider token usage is forwarded when returned;
+  missing or malformed usage stays absent. A read-only query of the deployed
+  project confirmed prior traces were chain-only with zero token usage; this
+  checkout was not deployed.
 - Added server-side Vietnamese prompt interpretation for generation, editing and
   variations; the library retains the user's original text. See
   [ADR 0008](docs/adr/0008-vietnamese-prompt-interpretation.md).
@@ -78,9 +83,9 @@ planner completion counts carry forward.
 - Audited source and dependencies; patched confirmed session, abuse, response
   buffering, cache and account-timing risks. Raised the minimum Python version
   to 3.11 so no supported environment resolves vulnerable Pillow 12.3.0.
-- Added a required Codex project workflow for repository changes: planner goal,
-  coding implementation, testing against both goals, and deployment-readiness
-  review. The review does not itself authorize deployment.
+- Added a required Codex project workflow for repository changes: researcher
+  evidence and recommendation, planner implementation goal, coding, testing,
+  and deployment-readiness review. The review does not itself authorize deployment.
 
 ## Implementation status
 

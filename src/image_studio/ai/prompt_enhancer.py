@@ -7,6 +7,7 @@ from typing import Protocol
 from urllib.parse import urlsplit
 
 import httpx
+from langsmith import set_run_metadata, traceable
 
 from .provider import ImageProviderError
 
@@ -54,17 +55,47 @@ class OpenAICompatiblePromptEnhancer:
         base_url: str,
         api_key: str | None,
         model: str,
+        provider_name: str = "openai",
         timeout_seconds: float = 30,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
+        self.provider_name = provider_name
         self._client = httpx.Client(
             timeout=httpx.Timeout(timeout_seconds), transport=transport
         )
 
-    def enhance(self, prompt: str, operation: str) -> str:
+    @traceable(
+        name="prompt_interpretation",
+        run_type="llm",
+        process_inputs=lambda inputs: {
+            "operation": inputs.get("operation"),
+            "has_prompt": bool(inputs.get("prompt")),
+        },
+        process_outputs=lambda output: {
+            "status": (
+                output.get("status", "unknown")
+                if isinstance(output, dict)
+                else "unknown"
+            ),
+            "has_output": (
+                bool(output.get("text")) if isinstance(output, dict) else False
+            ),
+            **(
+                {"usage_metadata": output["usage_metadata"]}
+                if isinstance(output, dict) and output.get("usage_metadata")
+                else {}
+            ),
+        },
+    )
+    def _traceable_enhance(self, prompt: str, operation: str) -> dict[str, object]:
+        """Call chat model and return text plus provider-reported usage.
+
+        Trace inputs and outputs are sanitized by the decorator. Prompt text is
+        used only in the request body and never returned from this method.
+        """
         task_context = _TASK_CONTEXT.get(operation)
         if task_context is None:
             raise ImageProviderError("This image operation is not supported.")
@@ -134,7 +165,20 @@ class OpenAICompatiblePromptEnhancer:
         rewritten = _message_text(content).strip()
         if not rewritten:
             raise ImageProviderError("Prompt language model returned an empty prompt.")
-        return rewritten
+        usage = _usage_metadata(payload.get("usage"))
+        set_run_metadata(
+            ls_provider=self.provider_name,
+            ls_model_name=self.model,
+        )
+        return {
+            "text": rewritten,
+            "status": "succeeded",
+            **({"usage_metadata": usage} if usage else {}),
+        }
+
+    def enhance(self, prompt: str, operation: str) -> str:
+        result = self._traceable_enhance(prompt, operation)
+        return str(result["text"])
 
     def close(self) -> None:
         self._client.close()
@@ -152,3 +196,33 @@ def _message_text(content: object) -> str:
             and isinstance(part.get("text"), str)
         )
     return ""
+
+
+def _usage_metadata(value: object) -> dict[str, int] | None:
+    """Keep only non-negative integer token counts returned by provider."""
+    if not isinstance(value, dict):
+        return None
+    aliases = {
+        "input_tokens": ("input_tokens", "prompt_tokens"),
+        "output_tokens": ("output_tokens", "completion_tokens"),
+        "total_tokens": ("total_tokens",),
+    }
+    fields: dict[str, int] = {}
+    for target, candidates in aliases.items():
+        for candidate in candidates:
+            candidate_value = value.get(candidate)
+            if (
+                isinstance(candidate_value, int)
+                and not isinstance(candidate_value, bool)
+                and candidate_value >= 0
+            ):
+                fields[target] = candidate_value
+                break
+    if not fields:
+        return None
+    if (
+        "total_tokens" not in fields
+        and {"input_tokens", "output_tokens"} <= fields.keys()
+    ):
+        fields["total_tokens"] = fields["input_tokens"] + fields["output_tokens"]
+    return fields

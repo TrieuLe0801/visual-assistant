@@ -9,6 +9,8 @@ from pathlib import Path
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from langsmith import tracing_context
+from langsmith.run_trees import RunTree
 from PIL import Image
 
 from image_studio.ai import (
@@ -78,7 +80,14 @@ def test_vietnamese_prompt_is_interpreted_and_original_is_saved(tmp_path: Path) 
         requests.append(json.loads(request.content))
         return httpx.Response(
             200,
-            json={"choices": [{"message": {"content": "English image instruction"}}]},
+            json={
+                "choices": [{"message": {"content": "English image instruction"}}],
+                "usage": {
+                    "prompt_tokens": 11,
+                    "completion_tokens": 7,
+                    "total_tokens": 18,
+                },
+            },
         )
 
     enhancer = OpenAICompatiblePromptEnhancer(
@@ -124,6 +133,61 @@ def test_vietnamese_prompt_is_interpreted_and_original_is_saved(tmp_path: Path) 
             assert [item["model"] for item in requests] == ["test-chat"] * 3
     finally:
         enhancer.close()
+
+
+def test_prompt_trace_records_safe_io_and_provider_usage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[RunTree] = []
+    original_end = RunTree.end
+
+    def capture_end(run: RunTree, *args: object, **kwargs: object) -> None:
+        original_end(run, *args, **kwargs)
+        captured.append(run)
+
+    monkeypatch.setattr(RunTree, "end", capture_end)
+    enhancer = OpenAICompatiblePromptEnhancer(
+        base_url="https://api.openai.com/v1",
+        api_key="test-key",
+        model="test-chat",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                json={
+                    "choices": [{"message": {"content": "safe rewritten prompt"}}],
+                    "usage": {
+                        "prompt_tokens": 11,
+                        "completion_tokens": 7,
+                        "total_tokens": 18,
+                    },
+                },
+                request=request,
+            )
+        ),
+    )
+    try:
+        with tracing_context(enabled="local"):
+            assert enhancer.enhance("private prompt marker", "generate") == (
+                "safe rewritten prompt"
+            )
+    finally:
+        enhancer.close()
+
+    assert len(captured) == 1
+    trace = captured[0]
+    assert trace.run_type == "llm"
+    assert trace.inputs == {"operation": "generate", "has_prompt": True}
+    assert trace.outputs == {
+        "status": "succeeded",
+        "has_output": True,
+        "usage_metadata": {
+            "input_tokens": 11,
+            "output_tokens": 7,
+            "total_tokens": 18,
+        },
+    }
+    assert "private prompt marker" not in json.dumps(trace.inputs)
+    assert "safe rewritten prompt" not in json.dumps(trace.outputs)
 
 
 def test_prompt_model_failure_stops_image_provider_and_records_failure(

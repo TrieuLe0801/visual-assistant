@@ -74,30 +74,7 @@ class ImageService:
         stored_path: str | None = None
         try:
             image_prompt = self.prompt_enhancer.enhance(prompt, operation)
-            if operation == "generate":
-                result = self.provider.generate(image_prompt)
-            elif operation == "edit":
-                if source is None:
-                    raise ImageProviderError("Source image is unavailable.")
-                edit = getattr(self.provider, "edit", None)
-                if not callable(edit):
-                    raise UnsupportedImageOperation(
-                        "Configured image provider does not support editing."
-                    )
-                result = edit(image_prompt, source[0], source[1])
-            elif operation == "variation":
-                if source is None:
-                    raise ImageProviderError("Source image is unavailable.")
-                variation = getattr(self.provider, "variation", None)
-                if not callable(variation):
-                    raise UnsupportedImageOperation(
-                        "Configured image provider does not support variations."
-                    )
-                result = variation(image_prompt, source[0], source[1])
-            else:
-                raise UnsupportedImageOperation(
-                    "This image operation is not supported."
-                )
+            result = _invoke_provider(self.provider, operation, image_prompt, source)
             if not isinstance(result, GeneratedImage):
                 raise ImageProviderError(
                     "Image provider returned an invalid image result."
@@ -150,3 +127,43 @@ def _trace_output(output: Any) -> dict[str, str | None]:
         "provider": output.provider,
         "model": output.model,
     }
+
+
+@traceable(
+    name="image_provider.operation",
+    run_type="llm",
+    process_inputs=lambda inputs: {
+        "operation": inputs.get("operation"),
+        "has_prompt": bool(inputs.get("prompt")),
+        "has_source": inputs.get("source") is not None,
+    },
+    process_outputs=lambda output: {
+        "status": "succeeded",
+        "has_output": isinstance(output, GeneratedImage),
+        **(
+            {"usage_metadata": output.usage_metadata}
+            if isinstance(output, GeneratedImage) and output.usage_metadata
+            else {}
+        ),
+    },
+)
+def _invoke_provider(
+    provider: ImageProvider,
+    operation: str,
+    prompt: str,
+    source: tuple[bytes, str] | None,
+) -> GeneratedImage:
+    set_run_metadata(ls_provider=provider.name, ls_model_name=provider.model)
+    if operation == "generate":
+        return provider.generate(prompt)
+    if operation not in {"edit", "variation"}:
+        raise UnsupportedImageOperation("This image operation is not supported.")
+    if source is None:
+        raise ImageProviderError("Source image is unavailable.")
+    method = getattr(provider, operation, None)
+    if not callable(method):
+        label = "editing" if operation == "edit" else "variations"
+        raise UnsupportedImageOperation(
+            f"Configured image provider does not support {label}."
+        )
+    return method(prompt, source[0], source[1])

@@ -50,16 +50,18 @@ Before editing code or project decisions, read these files in order:
 ### Working agreements
 
 - The primary Codex session uses `gpt-6-sol` to coordinate project work.
-  The project keeps `planner` on `gpt-6-sol` and `coding`, `testing` and
+  The project keeps `researcher` and `planner` on `gpt-6-sol`, and `coding`, `testing` and
   `deploying` on `gpt-5.6-luna`. Assign bounded ownership and coordinate
   shared-file edits.
 - These Codex development agents are separate from the app's runtime. See
   `docs/adr/0001-python-development-tooling.md`.
 - For every requested repository change, use `.agents/skills/project-workflow/`
-  and run `planner`, `coding`, `testing`, then `deploying` in sequence. This
+  and run `researcher`, `planner`, `coding`, `testing`, then `deploying` in sequence. This
   includes feature, bug-fix, refactor, configuration and documentation work;
   pure questions and status requests are exempt.
-- `planner` must define a structured goal, acceptance criteria, file scope,
+- `researcher` must research evidence, compare options, recommend an approach,
+  and report assumptions, risks and unresolved decisions before planning.
+- `planner` must consume the Research result and define a structured goal, acceptance criteria, file scope,
   checks and risks before `coding` edits. `coding` must report its goal and map
   each planned criterion to achieved, partial or blocked. `testing` must
   compare the artifact with both goals and report exact failures. `deploying`
@@ -71,12 +73,12 @@ Before editing code or project decisions, read these files in order:
 - Use `project-deployment` for release work. The standard project checks below
   govern code and tooling changes. See `docs/codex-workflow.md` for the
   portable file set and local setup.
-- Use `requirement-clarification` only when an unresolved user decision changes
-  scope or acceptance, or the user requests a deep requirements interview.
-  Research project facts first; the primary session asks and records decisions.
-- Use `project-ui` for interface changes, `project-browser-evaluation` when
-  browser behavior or visual acceptance is in scope, and
-  `project-security-review` for explicit security reviews. The planner defines
+- If an unresolved user decision changes scope or acceptance, record it in the
+  Research result and ask the smallest blocking question; continue independent work.
+- Use `project-ui` for interface changes and `project-browser-evaluation` when
+  browser behavior or visual acceptance is in scope. For explicit security
+  reviews, inspect authentication, owner isolation, secrets, input validation,
+  storage and logging boundaries, then report evidence and limits. The planner defines
   the UI brief; coding implements it; testing checks behavior and visuals.
   These are development skills, not application runtime agents.
 - Use `project-design-taste` for visual polish or redesign. Use
