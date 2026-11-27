@@ -74,6 +74,45 @@ evidence gaps after consuming Research result. No application files changed.
 Date: 2026-11-08
 Status: Current
 
+## LangSmith SmithDB endpoint migration — 2026-11-27
+
+- Phase 2 searched application code, scripts, tests, frontend, CI, deployment
+  files and hidden project configuration for deprecated run retrieval/query
+  methods and raw HTTP paths. No repository call site exists. Existing
+  LangSmith usage is limited to opt-in trace writing (`traceable`,
+  `set_run_metadata`, and `tracing_context`).
+- Upgraded the Python `langsmith` dependency floor from `>=0.4` to `>=0.16.2`
+  and refreshed `uv.lock`, resolving `langsmith==0.16.2`. This exceeds the
+  migration guide minimum `0.10.15` and matches latest stable checked during
+  this phase.
+- A prior read-only query of the deployed project is recorded above without a
+  command or caller location. Treat that telemetry as unattributed and outside
+  this repository scope unless its diagnostic script is supplied.
+
+Verification:
+
+- `uv lock`, `uv lock --check`: passed.
+- `uv run python -c 'import langsmith; print(langsmith.__version__)'`: passed,
+  `0.16.2`.
+- Focused `uv run pytest tests/test_model_routing.py
+  tests/test_prompt_enhancer.py`: passed, 11 tests.
+- Full `uv run pytest`: passed, 57 tests.
+- `uv run isort --check-only . .codex/hooks/format_python.py`,
+  `uv run black --check . .codex/hooks/format_python.py`,
+  `uv run flake8 . .codex/hooks/format_python.py`, and
+  `uv run ruff check . .codex/hooks/format_python.py`: passed.
+- Frontend `npm ci` then `npm run build`: passed. Initial build was blocked by
+  missing local Node dependencies (`tsc: command not found`).
+- `git diff --check`: passed. Repeat repository search found no deprecated
+  endpoint caller.
+
+No LangSmith network or write call was made. Remote telemetry remains
+unverified.
+
+Deployment readiness: `docker compose config --quiet` passed. `docker compose
+ps` showed zero services. Live target behavior and LangSmith remote behavior
+were not verified. Deployment skipped because it was not authorized.
+
 ## LangSmith token and I/O telemetry — 2026-11-26
 
 - Traced missing session tokens to image operations being `chain` runs, the
