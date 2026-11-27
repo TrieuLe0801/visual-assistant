@@ -17,6 +17,7 @@ from image_studio.ai import (
     GeneratedImage,
     OpenAICompatiblePromptEnhancer,
     PromptEnhancer,
+    build_prompt_enhancer,
 )
 from image_studio.app import create_app
 from image_studio.config import make_settings
@@ -69,6 +70,23 @@ def _register(client: TestClient) -> None:
         json={"email": "prompt@example.com", "password": "strong-pass-123"},
     )
     assert response.status_code == 201
+
+
+def test_app_starts_with_configured_prompt_enhancer(tmp_path: Path) -> None:
+    settings = make_settings(
+        database_path=tmp_path / "images.sqlite3",
+        image_storage_path=tmp_path / "images",
+        frontend_dist_path=tmp_path / "frontend",
+    )
+    enhancer = build_prompt_enhancer(settings)
+    try:
+        with TestClient(
+            create_app(settings=settings, prompt_enhancer=enhancer)
+        ) as client:
+            assert client.get("/api/health").status_code == 200
+            assert enhancer.provider_name == "openai"
+    finally:
+        enhancer.close()
 
 
 def test_vietnamese_prompt_is_interpreted_and_original_is_saved(tmp_path: Path) -> None:
