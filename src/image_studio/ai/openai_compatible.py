@@ -59,20 +59,28 @@ class OpenAICompatibleProvider:
         model: str,
         provider_name: str = "openai",
         timeout_seconds: float = 180,
+        complexity: str = "medium",
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
         self.name = provider_name
+        self.complexity = complexity
         self._client = httpx.Client(
             timeout=httpx.Timeout(timeout_seconds), transport=transport
         )
 
     def generate(self, prompt: str) -> GeneratedImage:
+        payload = {"model": self.model, "prompt": prompt, "output_format": "png"}
+        if self.name == "openai" and self.model in {
+            "gpt-image-2.6-sunburst",
+            "gpt-image-2.6-flare",
+        }:
+            payload["complexity"] = self.complexity
         response = self._post_json(
             "/images/generations",
-            {"model": self.model, "prompt": prompt, "output_format": "png"},
+            payload,
         )
         return _image_from_response(response)
 
@@ -120,11 +128,17 @@ class OpenAICompatibleProvider:
             raise UnsupportedImageOperation(
                 "The source image format is not supported for editing."
             )
+        data = {"model": self.model, "prompt": prompt, "output_format": "png"}
+        if self.name == "openai" and self.model in {
+            "gpt-image-2.6-sunburst",
+            "gpt-image-2.6-flare",
+        }:
+            data["complexity"] = self.complexity
         try:
             with self._client.stream(
                 "POST",
                 f"{self.base_url}/images/edits",
-                data={"model": self.model, "prompt": prompt, "output_format": "png"},
+                data=data,
                 files={"image": (f"source.{extension}", source, source_mime_type)},
                 headers=self._headers(),
             ) as response:

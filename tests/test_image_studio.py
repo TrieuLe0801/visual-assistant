@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import base64
 import importlib
+import json
+from email import policy
+from email.parser import BytesParser
 from io import BytesIO
 from pathlib import Path
 
@@ -326,6 +329,128 @@ def test_openai_adapter_chained_edit_sends_previous_png_as_multipart_source(
             assert first_result in body
     finally:
         provider.close()
+
+
+def test_gpt_image_26_complexity_is_sent_for_generate_edit_and_variation() -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={"data": [{"b64_json": base64.b64encode(PNG_BYTES).decode()}]},
+            request=request,
+        )
+
+    provider = OpenAICompatibleProvider(
+        base_url="https://api.openai.com/v1",
+        api_key="test-key",
+        model="gpt-image-2.6-sunburst",
+        complexity="medium",
+        transport=httpx.MockTransport(respond),
+    )
+    try:
+        provider.generate("prompt")
+        provider.edit("edit", PNG_BYTES, "image/png")
+        provider.variation("variation", PNG_BYTES, "image/png")
+    finally:
+        provider.close()
+
+    assert json.loads(requests[0].content)["complexity"] == "medium"
+    for request in requests[1:]:
+        message = BytesParser(policy=policy.default).parsebytes(
+            b"Content-Type: "
+            + request.headers["content-type"].encode()
+            + b"\r\n\r\n"
+            + request.content
+        )
+        fields = {
+            part.get_param("name", header="content-disposition"): part.get_content()
+            for part in message.iter_parts()
+            if part.get_content_disposition() == "form-data"
+        }
+        assert fields["complexity"] == "medium"
+
+
+def test_gpt_image_26_flare_and_high_complexity_are_forwarded() -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={"data": [{"b64_json": base64.b64encode(PNG_BYTES).decode()}]},
+            request=request,
+        )
+
+    provider = OpenAICompatibleProvider(
+        base_url="https://api.openai.com/v1",
+        api_key="test-key",
+        model="gpt-image-2.6-flare",
+        complexity="high",
+        transport=httpx.MockTransport(respond),
+    )
+    try:
+        provider.generate("prompt")
+        provider.edit("edit", PNG_BYTES, "image/png")
+        provider.variation("variation", PNG_BYTES, "image/png")
+    finally:
+        provider.close()
+
+    assert json.loads(requests[0].content)["complexity"] == "high"
+    for request in requests[1:]:
+        message = BytesParser(policy=policy.default).parsebytes(
+            b"Content-Type: "
+            + request.headers["content-type"].encode()
+            + b"\r\n\r\n"
+            + request.content
+        )
+        fields = {
+            part.get_param("name", header="content-disposition"): part.get_content()
+            for part in message.iter_parts()
+            if part.get_content_disposition() == "form-data"
+        }
+        assert fields["complexity"] == "high"
+
+
+def test_image_complexity_is_omitted_for_compatible_and_older_models() -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={"data": [{"b64_json": base64.b64encode(PNG_BYTES).decode()}]},
+            request=request,
+        )
+
+    providers = [
+        OpenAICompatibleProvider(
+            base_url="http://images.internal/v1",
+            api_key=None,
+            model="gpt-image-2.6-sunburst",
+            provider_name="openai_compatible",
+            transport=httpx.MockTransport(respond),
+        ),
+        OpenAICompatibleProvider(
+            base_url="https://api.openai.com/v1",
+            api_key="test-key",
+            model="gpt-image-2.5-sunburst",
+            transport=httpx.MockTransport(respond),
+        ),
+    ]
+    try:
+        for provider in providers:
+            provider.generate("prompt")
+            provider.edit("edit", PNG_BYTES, "image/png")
+            provider.variation("variation", PNG_BYTES, "image/png")
+    finally:
+        for provider in providers:
+            provider.close()
+
+    assert "complexity" not in json.loads(requests[0].content)
+    for request in requests[1:]:
+        assert b'name="complexity"' not in request.content
 
 
 @pytest.mark.parametrize(

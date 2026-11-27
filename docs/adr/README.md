@@ -14,6 +14,7 @@ The active product/runtime scope is defined by ADR 0005 and the current
 | [0007 — Single-host Compose deployment with Cloudflare Tunnel](0007-single-host-compose-cloudflare.md) | Accepted |
 | [0008 — Vietnamese prompt interpretation](0008-vietnamese-prompt-interpretation.md) | Accepted |
 | [0009 — Bounded generation count and image deletion](0009-image-batch-and-deletion.md) | Accepted |
+| [0013 — Bound GPT-Image-2.6 render complexity](0013-image-generation-complexity.md) | Accepted |
 
 Use sequential filenames. Include status, context, decision, alternatives,
 consequences and review triggers in each new record.

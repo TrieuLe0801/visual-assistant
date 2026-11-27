@@ -47,6 +47,7 @@ class Settings:
     prompt_model: PromptModelSettings = field(default_factory=PromptModelSettings)
     model_catalog: tuple[ImageModelProfile, ...] = ()
     active_model: str = "default"
+    image_complexity: str = "medium"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -102,6 +103,7 @@ class Settings:
             ),
             model_catalog=model_catalog,
             active_model=os.getenv("IMAGE_ACTIVE_MODEL", "default").strip(),
+            image_complexity=os.getenv("IMAGE_COMPLEXITY", "medium").strip().lower(),
         )
 
     def validate(self) -> None:
@@ -118,6 +120,8 @@ class Settings:
             raise ValueError("PROMPT_MODEL must not be empty.")
         if self.prompt_model.timeout_seconds <= 0:
             raise ValueError("PROMPT_TIMEOUT_SECONDS must be positive.")
+        if self.image_complexity not in {"low", "medium", "high"}:
+            raise ValueError("IMAGE_COMPLEXITY must be low, medium or high.")
         if self.prompt_model.provider_name not in {"openai", "openai_compatible"}:
             raise ValueError("PROMPT_PROVIDER must be openai or openai_compatible.")
         aliases = [profile.alias for profile in self.model_catalog]
@@ -208,6 +212,7 @@ def make_settings(
         "registration_enabled": True,
         "model_catalog": (),
         "active_model": "default",
+        "image_complexity": "medium",
     }
     defaults.update(overrides)
     return Settings(

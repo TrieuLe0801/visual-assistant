@@ -31,6 +31,7 @@ services:
       FRONTEND_DIST_PATH: /app/frontend/dist
       IMAGE_PROVIDER: ${IMAGE_PROVIDER:-openai}
       IMAGE_MODEL: ${IMAGE_MODEL:-gpt-image-2.5-sunburst}
+      IMAGE_COMPLEXITY: ${IMAGE_COMPLEXITY:-medium}
       IMAGE_MODEL_CATALOG: ${IMAGE_MODEL_CATALOG:-}
       IMAGE_ACTIVE_MODEL: ${IMAGE_ACTIVE_MODEL:-default}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
