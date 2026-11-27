@@ -50,3 +50,17 @@ def test_sample_secret_file_is_rejected(
     monkeypatch.setenv("SESSION_SECRET_FILE", str(path))
     with pytest.raises(ValueError, match="SESSION_SECRET"):
         Settings.from_env()
+
+
+def test_prompt_provider_name_matches_configured_endpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "session-secret"
+    path.write_text("file-secret-long-enough-for-test\n", encoding="utf-8")
+    monkeypatch.setenv("SESSION_SECRET_FILE", str(path))
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    monkeypatch.setenv("PROMPT_API_BASE_URL", "https://llm.example.test/v1")
+
+    settings = Settings.from_env()
+
+    assert settings.prompt_model.provider_name == "openai_compatible"

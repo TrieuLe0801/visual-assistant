@@ -26,6 +26,7 @@ class PromptModelSettings:
     model_name: str = "gpt-6-luna"
     api_base_url: str = "https://api.openai.com/v1"
     api_key: str | None = field(default=None, repr=False)
+    provider_name: str = "openai"
     timeout_seconds: float = 30.0
 
 
@@ -69,6 +70,9 @@ class Settings:
         prompt_api_key = os.getenv("PROMPT_API_KEY")
         if not prompt_api_key and prompt_base_url == openai_base_url:
             prompt_api_key = os.getenv("OPENAI_API_KEY")
+        prompt_provider_name = (
+            "openai" if prompt_base_url == openai_base_url else "openai_compatible"
+        )
         model_catalog = _model_catalog_from_env(os.getenv("IMAGE_MODEL_CATALOG", ""))
         return cls(
             database=DatabaseSettings.from_env(),
@@ -93,6 +97,7 @@ class Settings:
                 model_name=os.getenv("PROMPT_MODEL", "gpt-6-luna").strip(),
                 api_base_url=prompt_base_url,
                 api_key=prompt_api_key,
+                provider_name=prompt_provider_name,
                 timeout_seconds=float(os.getenv("PROMPT_TIMEOUT_SECONDS", "30")),
             ),
             model_catalog=model_catalog,
@@ -113,6 +118,8 @@ class Settings:
             raise ValueError("PROMPT_MODEL must not be empty.")
         if self.prompt_model.timeout_seconds <= 0:
             raise ValueError("PROMPT_TIMEOUT_SECONDS must be positive.")
+        if self.prompt_model.provider_name not in {"openai", "openai_compatible"}:
+            raise ValueError("PROMPT_PROVIDER must be openai or openai_compatible.")
         aliases = [profile.alias for profile in self.model_catalog]
         if len(aliases) != len(set(aliases)):
             raise ValueError("IMAGE_MODEL_CATALOG aliases must be unique.")

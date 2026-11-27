@@ -1,5 +1,40 @@
 # Learning Log — AI image studio MVP
 
+## Container startup recovery — 2026-11-26
+
+The live Compose `app` restarted repeatedly with
+`AttributeError: 'PromptModelSettings' object has no attribute 'provider_name'`
+at `src/image_studio/ai/factory.py:56`. `frontend` stayed in `Created` while
+waiting for app health, leaving the tunnel without an origin. A recent
+telemetry change began reading the field, but `PromptModelSettings` did not
+define it. Added the field, derived `openai` or `openai_compatible` from the
+configured prompt endpoint, and added startup and endpoint metadata tests.
+The endpoint distinction reflects configuration, not an independently
+verified upstream provider identity.
+
+Verification before rollout:
+
+- Focused pytest (`tests/test_prompt_enhancer.py` and
+  `tests/test_deployment_config.py`): passed, 10 tests.
+- Full `uv run pytest -q`: passed, 57 tests. isort, Black, flake8, Ruff,
+  frontend `npm run build`, both Compose config profiles, and
+  `git diff --check`: passed.
+- Initial pytest without a writable uv cache failed on sandbox access to
+  `~/.cache/uv`; retry with `UV_CACHE_DIR=/private/tmp/visual-assistant-uv-cache`
+  passed.
+
+Local repair: `docker compose build app`, `docker compose --profile publish up
+-d --no-deps --force-recreate app`, then `docker compose --profile publish up
+-d --wait frontend cloudflared` passed. `app` and `frontend` are healthy,
+`cloudflared` is running, and one-shot `database` exited 0. Local `/` and
+`/api/health` returned HTTP 200. The app retained the
+`visual_assistant_image_data` mount and read-only session-secret mount.
+Tunnel logs show registration after the origin returned. Public
+`https://aliter.app/api/health` was not verified because DNS lookup failed
+from this environment. Backup/restore was not repeated for this app-only
+rebuild; no volume or secret was changed. Live image generation and provider
+operations were not tested.
+
 ## Research-first workflow and skill pruning — 2026-11-26
 
 - Added project `researcher` before `planner`. Researcher records repository and

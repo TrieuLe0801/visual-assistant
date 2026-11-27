@@ -2,6 +2,17 @@
 
 Last updated: 2026-11-26
 
+## Container recovery — 2026-11-26
+
+The web origin recovered from a startup failure. `app` repeatedly crashed because
+`build_prompt_enhancer` read `PromptModelSettings.provider_name` before that
+setting existed. The fix adds the setting and a startup regression. The app
+image was rebuilt and its container recreated without changing the persistent
+SQLite/image volume or ignored secrets. `app` and `frontend` are healthy;
+local `/` and `/api/health` return HTTP 200. `cloudflared` is running and its
+Compose origin resolves. Public `aliter.app` remains unverified from this
+environment because DNS lookup failed. No live image generation was tested.
+
 ## Current milestone
 
 MVP implemented. Users can select 1–6 images per creation action and delete
