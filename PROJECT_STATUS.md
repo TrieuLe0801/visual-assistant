@@ -15,9 +15,15 @@ environment because DNS lookup failed. No live image generation was tested.
 
 ## Current milestone
 
+2026-11-27 latency research found OpenAI image-provider rendering dominated
+generation time (122.18 of 125.58 seconds in the slowest observed trace).
+Server-side `IMAGE_COMPLEXITY=medium` now targets GPT-Image-2.6 Sunburst/Flare;
+`high` remains available as rollback. Post-rollout latency and quality remain
+unverified.
+
 MVP implemented. Users can select 1–6 images per creation action and delete
-images from their library. Earlier offline tests and the current frontend build
-pass; the latest pytest run has one failure documented below. The
+images from their library. Offline tests and the current frontend build pass.
+The latest full pytest run has 62 passed tests. The
 updated backend/frontend are running in the existing Compose stack; local and
 public health checks returned HTTP 200. The named Cloudflare Tunnel serves
 `aliter.app`; its public `/api/health` returned HTTP 200 on 2026-11-14.

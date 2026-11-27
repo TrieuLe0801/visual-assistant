@@ -100,6 +100,44 @@ def test_catalog_selects_model_from_server_environment(
     assert settings.model_catalog[1].api_base_url == "http://127.0.0.1:8001/v1"
 
 
+def test_image_complexity_accepts_supported_values_and_rejects_invalid(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(
+        database_path=tmp_path / "db.sqlite3",
+        image_storage_path=tmp_path / "images",
+        frontend_dist_path=tmp_path / "frontend",
+        image_complexity="high",
+    )
+    settings.validate()
+    invalid = make_settings(
+        database_path=tmp_path / "invalid.sqlite3",
+        image_storage_path=tmp_path / "invalid-images",
+        frontend_dist_path=tmp_path / "frontend",
+        image_complexity="turbo",
+    )
+    with pytest.raises(ValueError, match="IMAGE_COMPLEXITY"):
+        invalid.validate()
+
+
+def test_from_env_default_complexity_reaches_active_openai_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SESSION_SECRET", "test-session-secret-that-is-long-enough")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("IMAGE_MODEL", "gpt-image-2.6-sunburst")
+    monkeypatch.delenv("IMAGE_COMPLEXITY", raising=False)
+    settings = Settings.from_env()
+    settings.validate()
+    router = build_provider(settings)
+    try:
+        assert settings.image_complexity == "medium"
+        selected = router._providers["default"]
+        assert selected.complexity == "medium"
+    finally:
+        router.close()
+
+
 def test_invalid_catalog_and_active_model_fail_at_startup(tmp_path: Path) -> None:
     profile = ImageModelProfile(
         "cloud", "openai", "image-one", "https://api.openai.com/v1", None

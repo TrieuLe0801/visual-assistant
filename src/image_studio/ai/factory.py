@@ -79,4 +79,5 @@ def _build_profile(profile: ImageModelProfile, settings: Settings) -> ImageProvi
         model=model,
         provider_name=provider_name,
         timeout_seconds=settings.provider_timeout_seconds,
+        complexity=settings.image_complexity,
     )

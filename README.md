@@ -30,6 +30,9 @@ database hoặc log.
 API. Đặt `true` trong `.env` để mở lại trang và API đăng ký.
 
 - Provider OpenAI dùng `IMAGE_PROVIDER=openai` và `OPENAI_API_KEY`.
+- Với `gpt-image-2.6-sunburst` hoặc `gpt-image-2.6-flare`, `IMAGE_COMPLEXITY`
+  mặc định là `medium` để giảm thời gian render. Đặt `high` nếu cần khôi phục
+  mức chi tiết cao hơn. Tham số này không gửi tới model cũ hoặc endpoint tự host.
 - Provider tự host dùng `IMAGE_PROVIDER=openai_compatible`,
   `IMAGE_API_BASE_URL`, `IMAGE_MODEL` và có thể đặt `IMAGE_API_KEY`.
 - Model hiểu prompt dùng `PROMPT_MODEL`, `PROMPT_API_BASE_URL` và

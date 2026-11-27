@@ -1,5 +1,30 @@
 # Learning Log — AI image studio MVP
 
+## Provider render latency — 2026-11-27
+
+Research found seven read-only LangSmith runs: provider `openai`, model
+`gpt-image-2.6-sunburst`. Slowest generation took 125.58 seconds; prompt
+interpretation took 3.32 seconds and image provider took 122.18 seconds (97.3%).
+The adapter sent no render complexity, so GPT-Image-2.6 used its high default.
+
+Implemented server-side `IMAGE_COMPLEXITY=medium` for GPT-Image-2.6 Sunburst and
+Flare across generation, edit and variation. `high` restores the prior tradeoff;
+older models and OpenAI-compatible endpoints receive no complexity parameter.
+PNG output, storage, owner isolation and trace redaction remain unchanged.
+
+Verification: focused adapter/config suite passed (46 tests); full `uv run
+pytest -q` passed (62 tests). isort, Black, flake8, Ruff, frontend build,
+both Compose config profiles and `git diff --check` passed. No post-change live
+provider latency or image-quality measure exists until rollout. Medium may
+reduce accuracy for complex layouts or dense text; compare LangSmith latency
+and user-visible quality after deployment.
+
+Correction cycle 1 added parsed multipart assertions for medium/high complexity
+on Sunburst and Flare edit/variation requests, omission checks for older and
+compatible providers, and the default `from_env` to factory path. Focused suite
+now passes 46 tests; Black and Ruff pass. No historical pre-fix test failure was
+recorded for this correction. Live provider measurement remains not run.
+
 ## Progress and action clarity — 2026-11-27
 
 - Added truthful progress feedback for image creation with up to two requests in
