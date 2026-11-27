@@ -7,6 +7,7 @@ type ImageRecord = {
   operation: "generate" | "edit" | "variation";
   status: "succeeded" | "failed" | "processing";
   parent_id: number | null;
+  root_id?: number | null;
   mime_type: string | null;
   created_at: string;
   error?: string | null;
@@ -23,13 +24,17 @@ const image = (id: number, prompt = `Ảnh ${id}`): ImageRecord => ({
   created_at: date,
 });
 
-async function mockApi(page: Page, options: { images?: ImageRecord[]; registration?: boolean; holdGeneration?: boolean } = {}) {
+async function mockApi(page: Page, options: { images?: ImageRecord[]; registration?: boolean; holdFirstGenerate?: boolean; holdDerived?: boolean; failDerived?: boolean; holdGeneration?: boolean; holdRefresh?: boolean } = {}) {
   let loggedIn = false;
   let images = [...(options.images ?? [])];
   let nextId = 20;
   let generateCalls = 0;
   const heldGeneration: Array<() => void> = [];
   let failNextLibrary = false;
+  let releaseGenerate: (() => void) | null = null;
+  let releaseDerived: (() => void) | null = null;
+  let releaseRefresh: (() => void) | null = null;
+  let holdNextLibrary = false;
 
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -52,6 +57,10 @@ async function mockApi(page: Page, options: { images?: ImageRecord[]; registrati
       return route.fulfill({ status: 204, body: "" });
     }
     if (path === "/api/images" && method === "GET") {
+      if (holdNextLibrary) {
+        holdNextLibrary = false;
+        await new Promise<void>((resolve) => { releaseRefresh = resolve; });
+      }
       if (failNextLibrary) {
         failNextLibrary = false;
         return json({ detail: "library unavailable" }, 503);
@@ -60,11 +69,15 @@ async function mockApi(page: Page, options: { images?: ImageRecord[]; registrati
     }
     if (path === "/api/images/generate" && method === "POST") {
       const callNumber = ++generateCalls;
+      if (options.holdFirstGenerate && callNumber === 1) {
+        await new Promise<void>((resolve) => { releaseGenerate = resolve; });
+      }
       const body = await request.postDataJSON();
       const respond = () => {
         if (callNumber === 2 && body.prompt === "partial") return json({ detail: "provider unavailable" }, 503);
         const created = image(nextId++, body.prompt);
         images = [created, ...images];
+        if (options.holdRefresh) holdNextLibrary = true;
         return json(created);
       };
       if (options.holdGeneration) {
@@ -72,6 +85,18 @@ async function mockApi(page: Page, options: { images?: ImageRecord[]; registrati
         return;
       }
       return respond();
+    }
+    const derivedMatch = path.match(/^\/api\/images\/(\d+)\/(edit|variations)$/);
+    if (derivedMatch && method === "POST") {
+      if (options.holdDerived) {
+        await new Promise<void>((resolve) => { releaseDerived = resolve; });
+      }
+      if (options.failDerived) return json({ detail: "provider unavailable" }, 503);
+      const body = await request.postDataJSON();
+      const operation = derivedMatch[2] === "edit" ? "edit" as const : "variation" as const;
+      const created = { ...image(nextId++, body.prompt ?? "Biến thể"), operation, parent_id: Number(derivedMatch[1]), root_id: Number(derivedMatch[1]) };
+      images = [created, ...images];
+      return json(created);
     }
     const fileMatch = path.match(/^\/api\/images\/(\d+)\/file$/);
     if (fileMatch && method === "GET") return route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("fake-png") });
@@ -91,6 +116,9 @@ async function mockApi(page: Page, options: { images?: ImageRecord[]; registrati
       await expect(page.getByRole("heading", { name: "Thư viện hình ảnh" })).toBeVisible();
     },
     failLibrary: () => { failNextLibrary = true; },
+    releaseGenerate: () => { releaseGenerate?.(); },
+    releaseDerived: () => { releaseDerived?.(); },
+    releaseRefresh: () => { releaseRefresh?.(); },
     generateCallCount: () => generateCalls,
     releaseGeneration: () => heldGeneration.shift()?.(),
   };
@@ -118,6 +146,66 @@ test("partial six-image creation keeps successful results and reports failure", 
   await page.locator('button[type="submit"]').click();
   await expect(page.getByRole("alert")).toContainText("5/6 ảnh đã tạo");
   await expect(page.getByText("partial").first()).toBeVisible();
+});
+
+test("creation progress names active request and completed attempts", async ({ page }) => {
+  const api = await mockApi(page, { holdFirstGenerate: true });
+  await page.goto("/");
+  await api.login();
+  await page.getByRole("button", { name: /Tạo hình ảnh mới/ }).click();
+  await page.getByLabel("Mô tả hình ảnh").fill("progress");
+  await page.getByLabel("Số ảnh cần tạo").selectOption("1");
+  await page.locator('button[type="submit"]').click();
+  await expect(page.getByRole("status")).toContainText("Đã xử lý 0/1 lượt");
+  await expect(page.getByRole("status")).toContainText("1 lượt đang chạy");
+  await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  api.releaseGenerate();
+  await expect(page.getByRole("status")).toHaveCount(0);
+});
+
+test("creation shows library refresh phase after requests settle", async ({ page }) => {
+  const api = await mockApi(page, { holdRefresh: true });
+  await page.goto("/");
+  await api.login();
+  await page.getByRole("button", { name: /Tạo hình ảnh mới/ }).click();
+  await page.getByLabel("Mô tả hình ảnh").fill("refresh");
+  await page.locator('button[type="submit"]').click();
+  await expect.poll(() => page.getByRole("status").textContent()).toContain("Đang cập nhật thư viện");
+  api.releaseRefresh();
+  await expect(page.getByRole("status")).toHaveCount(0);
+});
+
+test("edit progress locks duplicate submit until stored version returns", async ({ page }) => {
+  const root = image(40, "Ảnh nguồn");
+  const api = await mockApi(page, { images: [root], holdDerived: true });
+  await page.goto("/");
+  await api.login();
+  await page.getByRole("button", { name: /Mở hình ảnh: Ảnh nguồn/ }).click();
+  await page.getByLabel("Chỉnh sửa bằng prompt").fill("Thêm ánh sáng ấm");
+  const submit = page.locator(".action-form").first().getByRole("button");
+  await submit.click();
+  await expect(page.getByRole("status")).toContainText("Đang tạo bản chỉnh sửa");
+  await expect(page.getByRole("button", { name: /Đang chỉnh sửa/ })).toBeDisabled();
+  api.releaseDerived();
+  await expect(page.getByRole("button", { name: /V2/ })).toBeVisible();
+  await expect(page.getByRole("status")).toHaveCount(0);
+});
+
+test("variation progress clears on error and keeps selected source", async ({ page }) => {
+  const root = image(41, "Ảnh nguồn biến thể");
+  const api = await mockApi(page, { images: [root], holdDerived: true, failDerived: true });
+  await page.goto("/");
+  await api.login();
+  await page.getByRole("button", { name: /Mở hình ảnh: Ảnh nguồn biến thể/ }).click();
+  await page.getByLabel(/Tạo biến thể/).fill("Biến thể ánh sáng mềm");
+  const submit = page.locator(".variation-form").getByRole("button");
+  await submit.click();
+  await expect(page.getByRole("status")).toContainText("Đang tạo biến thể");
+  await expect(page.getByRole("button", { name: /Đang tạo biến thể/ })).toBeDisabled();
+  api.releaseDerived();
+  await expect(page.getByRole("alert")).toContainText("provider unavailable");
+  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.getByText("Ảnh nguồn biến thể").last()).toBeVisible();
 });
 
 test("batch generation keeps at most two requests in flight", async ({ page }) => {
@@ -158,6 +246,40 @@ test("detail shows prompt and download link", async ({ page }) => {
   await page.getByRole("button", { name: /Mở hình ảnh: Prompt chi tiết/ }).click();
   await expect(page.getByText("Prompt chi tiết").last()).toBeVisible();
   await expect(page.getByRole("link", { name: /Tải hình ảnh/ })).toHaveAttribute("download", "");
+});
+
+test("groups versions into one card and lets user select and delete a version", async ({ page }) => {
+  const root = { ...image(7, "Bản gốc"), created_at: "2026-11-23T11:00:00Z" };
+  const edit = { ...image(8, "Bản chỉnh sửa"), operation: "edit" as const, parent_id: 7, root_id: 7, created_at: "2026-11-23T12:00:00Z" };
+  const api = await mockApi(page, { images: [edit, { ...root, root_id: 7 }] });
+  await page.goto("/");
+  await api.login();
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Bản chỉnh sửa/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /Mở hình ảnh: Bản chỉnh sửa/ })).toContainText("2 phiên bản");
+  await page.getByRole("button", { name: /Mở hình ảnh: Bản chỉnh sửa/ }).click();
+  await expect(page.getByRole("button", { name: /V1/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /V2/ })).toBeVisible();
+  await page.getByRole("button", { name: /V1/ }).focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: /V2/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /V1/ }).click();
+  await expect(page.getByRole("heading", { name: "Lịch sử hình ảnh" })).toHaveCount(0);
+  await expect(page.getByText("Bản gốc").last()).toBeVisible();
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Xóa ảnh" }).click();
+  await expect(page.getByText("Bản chỉnh sửa").last()).toBeVisible();
+});
+
+test("latest failed version remains visible as failed state", async ({ page }) => {
+  const root = image(30, "Bản gốc");
+  const failed = { ...image(31, "Lần chỉnh sửa lỗi"), operation: "edit" as const, status: "failed" as const, parent_id: 30, root_id: 30, error: "provider unavailable" };
+  const api = await mockApi(page, { images: [failed, root] });
+  await page.goto("/");
+  await api.login();
+  const card = page.getByRole("button", { name: /Mở hình ảnh: Lần chỉnh sửa lỗi/ });
+  await expect(card).toContainText("Thất bại");
+  await expect(card.locator("img")).toHaveCount(0);
 });
 
 test("library error offers retry", async ({ page }) => {

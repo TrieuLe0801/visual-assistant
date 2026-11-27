@@ -56,6 +56,7 @@ class ImageOutput(BaseModel):
     operation: str
     status: str
     parent_id: str | None
+    root_id: str | None
     created_at: str
     provider: str
     model: str
@@ -274,6 +275,7 @@ def create_app(
         enforce_image_limit(user.id)
         return _run_operation(
             service=image_service,
+            database=database,
             owner_id=user.id,
             prompt=prompt,
             operation="generate",
@@ -314,6 +316,7 @@ def create_app(
         enforce_image_limit(user.id)
         return _run_operation(
             service=image_service,
+            database=database,
             owner_id=user.id,
             prompt=prompt,
             operation="edit",
@@ -340,6 +343,7 @@ def create_app(
         enforce_image_limit(user.id)
         return _run_operation(
             service=image_service,
+            database=database,
             owner_id=user.id,
             prompt=prompt,
             operation="variation",
@@ -360,6 +364,7 @@ def create_app(
 def _run_operation(
     *,
     service: ImageService,
+    database: Database,
     owner_id: str,
     prompt: str,
     operation: str,
@@ -381,7 +386,8 @@ def _run_operation(
             "provider": status.HTTP_502_BAD_GATEWAY,
         }[exc.reason]
         raise HTTPException(status_code=code, detail=exc.detail) from exc
-    return _image_output(record)
+    persisted = database.get_image(owner_id, record.id)
+    return _image_output(persisted or record)
 
 
 def _mount_frontend(app: FastAPI, distribution: Path) -> None:
@@ -490,6 +496,7 @@ def _image_output(record: ImageRecord | None) -> ImageOutput:
         operation=record.operation,
         status=record.status,
         parent_id=record.parent_id,
+        root_id=record.root_id,
         created_at=record.created_at,
         provider=record.provider,
         model=record.model,

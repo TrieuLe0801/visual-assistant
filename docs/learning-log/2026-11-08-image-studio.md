@@ -1,5 +1,33 @@
 # Learning Log — AI image studio MVP
 
+## Progress and action clarity — 2026-11-27
+
+- Added truthful progress feedback for image creation with up to two requests in
+  flight: completed attempts, successful stored-image count and active requests.
+  Edit and variation now show explicit saving status and stronger action
+  hierarchy, including a labeled download control.
+- Browser coverage adds held-request checks for create, edit and variation
+  active progress semantics, duplicate-submit locking and status cleanup.
+  Focused desktop/mobile checks passed (6 tests). Provider phases, live
+  generation and deployment remain unverified.
+
+Verification: frontend build passed; full browser suite passed with 30
+desktop/mobile tests. `uv run pytest -q` passed with 57 tests. isort, Black,
+flake8, Ruff and `git diff --check` passed. These are offline checks; live
+provider and deployed behavior were not tested.
+
+## Version-group UI correction — 2026-11-27
+
+- Grouped image records by stable root lineage in library while retaining
+  separate files and metadata. Detail exposes chronological version cards,
+  selected state, status and per-version actions. Removed redundant card delete.
+- Added responsive version selector styling and deterministic browser coverage
+  for grouping, selection and deleting selected version.
+
+Verification: `uv run pytest -q` passed (57 tests); frontend build and browser
+suite passed after dependency install (30 desktop/mobile tests). Full style checks and `git diff --check`
+passed. Live provider, deployed health and production browser remain unverified.
+
 ## Bounded batch generation concurrency — 2026-11-27
 
 Coding goal: reduce wall-clock latency for 1–6 image creation batches while
@@ -14,8 +42,8 @@ Verification:
 - `npm ci` in `frontend/`: passed. Existing npm audit reports 2 high
   advisories; dependency tree was not changed.
 - `npm run build` in `frontend/`: passed.
-- `npm run test:browser -- --workers=1` in `frontend/`: passed, 18 desktop and
-  mobile tests, including bounded concurrency and stale-response coverage.
+- `npm run test:browser -- --workers=1` in `frontend/`: passed, 30 desktop and
+  mobile tests, including bounded concurrency, refresh-phase and stale-response coverage.
   One earlier retest failed the concurrency assertion and then lost its Vite
   connection. A focused rerun passed 2/2 tests; two subsequent full reruns
   passed 18/18. The intermittent failure has not been reproduced or explained.

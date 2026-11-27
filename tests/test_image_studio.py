@@ -390,6 +390,8 @@ def test_delete_removes_file_and_hides_record_but_preserves_child_lineage(
     child = client.post(
         f"/api/images/{original['id']}/edit", json={"prompt": "Add stars"}
     ).json()
+    assert original["root_id"] == original["id"]
+    assert child["root_id"] == original["id"]
     file_path = client.app.state.storage.resolve(
         client.app.state.database.get_image(
             client.get("/api/auth/me").json()["id"], original["id"]
@@ -405,6 +407,7 @@ def test_delete_removes_file_and_hides_record_but_preserves_child_lineage(
     records = client.get("/api/images").json()
     assert [record["id"] for record in records] == [child["id"]]
     assert records[0]["parent_id"] == original["id"]
+    assert records[0]["root_id"] == original["id"]
     assert client.get(child["file_url"]).status_code == 200
 
 

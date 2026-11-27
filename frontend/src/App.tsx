@@ -8,6 +8,7 @@ type ImageRecord = {
   operation: "generate" | "edit" | "variation";
   status: "processing" | "succeeded" | "failed";
   parent_id: number | string | null;
+  root_id?: number | string | null;
   mime_type: string | null;
   created_at: string;
   error?: string | null;
@@ -92,6 +93,9 @@ function App() {
   const [prompt, setPrompt] = useState("");
   const [imageCount, setImageCount] = useState(1);
   const [completedCount, setCompletedCount] = useState(0);
+  const [successCount, setSuccessCount] = useState(0);
+  const [startedCount, setStartedCount] = useState(0);
+  const [generationPhase, setGenerationPhase] = useState<"generating" | "refreshing" | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [variationPrompt, setVariationPrompt] = useState("");
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -103,25 +107,43 @@ function App() {
     () => images.find((image) => String(image.id) === String(selectedId)) ?? null,
     [images, selectedId],
   );
-  const related = useMemo(
-    () =>
-      selected
-        ? images.filter(
-            (image) =>
-              String(image.parent_id) === String(selected.id) ||
-              String(selected.parent_id) === String(image.id),
-          )
-        : [],
-    [images, selected],
-  );
+  const rootFor = useCallback((image: ImageRecord): string => {
+    if (image.root_id != null) return String(image.root_id);
+    let current = image;
+    const seen = new Set<string>();
+    while (current.parent_id != null && !seen.has(String(current.id))) {
+      seen.add(String(current.id));
+      const parent = images.find((candidate) => String(candidate.id) === String(current.parent_id));
+      if (!parent) break;
+      current = parent;
+    }
+    return String(current.id);
+  }, [images]);
+  const selectedVersions = useMemo(() => {
+    if (!selected) return [];
+    return images
+      .filter((image) => rootFor(image) === rootFor(selected))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [images, rootFor, selected]);
+  const groupedImages = useMemo(() => {
+    const groups = new Map<string, ImageRecord[]>();
+    images.forEach((image) => {
+      const key = rootFor(image);
+      groups.set(key, [...(groups.get(key) ?? []), image]);
+    });
+    return [...groups.values()].map((versions) => ({
+      versions,
+      representative: versions[0],
+    }));
+  }, [images, rootFor]);
   const visibleImages = useMemo(() => {
     const query = libraryQuery.trim().toLocaleLowerCase();
-    return images.filter((image) => {
-      const matchesQuery = !query || image.prompt.toLocaleLowerCase().includes(query);
-      const matchesFilter = libraryFilter === "all" || image.status === libraryFilter;
+    return groupedImages.filter(({ versions }) => {
+      const matchesQuery = !query || versions.some((image) => image.prompt.toLocaleLowerCase().includes(query));
+      const matchesFilter = libraryFilter === "all" || versions.some((image) => image.status === libraryFilter);
       return matchesQuery && matchesFilter;
     });
-  }, [images, libraryFilter, libraryQuery]);
+  }, [groupedImages, libraryFilter, libraryQuery]);
 
   const loadImages = useCallback(async () => {
     const session = sessionVersion.current;
@@ -194,6 +216,8 @@ function App() {
     setLoadingImages(false);
     setWorking(false);
     setWorkingAction(null);
+    setStartedCount(0);
+    setGenerationPhase(null);
     setSelectedId(null);
     setLibraryQuery("");
     setLibraryFilter("all");
@@ -206,6 +230,9 @@ function App() {
     if (!value) return;
     setError("");
     setCompletedCount(0);
+    setSuccessCount(0);
+    setStartedCount(0);
+    setGenerationPhase("generating");
     setWorking(true);
     const session = sessionVersion.current;
     try {
@@ -217,7 +244,8 @@ function App() {
         while (true) {
           const index = nextIndex;
           nextIndex += 1;
-          if (index >= total) return;
+          if (index >= total || sessionVersion.current !== session) return;
+          setStartedCount((count) => count + 1);
           try {
             const image = await request<ImageRecord>("/api/images/generate", {
               method: "POST",
@@ -225,6 +253,7 @@ function App() {
             });
             if (sessionVersion.current !== session) return;
             created.push(image);
+            setSuccessCount((count) => count + 1);
             setImages((current) => [image, ...current.filter((item) => String(item.id) !== String(image.id))]);
           } catch (cause) {
             if (sessionVersion.current !== session) return;
@@ -235,6 +264,8 @@ function App() {
         }
       };
       await Promise.all(Array.from({ length: Math.min(2, total) }, () => generateOne()));
+      if (sessionVersion.current !== session) return;
+      setGenerationPhase("refreshing");
       await loadImages();
       if (sessionVersion.current !== session) return;
       if (created.length > 0) {
@@ -248,11 +279,15 @@ function App() {
       }
     } catch (cause) {
       if (sessionVersion.current !== session) return;
+      setGenerationPhase("refreshing");
       await loadImages();
       if (sessionVersion.current !== session) return;
       setError(cause instanceof Error ? cause.message : "Tạo ảnh thất bại.");
     } finally {
-      if (sessionVersion.current === session) setWorking(false);
+      if (sessionVersion.current === session) {
+        setWorking(false);
+        setGenerationPhase(null);
+      }
     }
   }
 
@@ -266,8 +301,9 @@ function App() {
       if (sessionVersion.current !== session) return;
       setImages((current) => current.filter((item) => String(item.id) !== String(image.id)));
       if (String(selectedId) === String(image.id)) {
-        setSelectedId(null);
-        setView("library");
+        const remaining = images.filter((item) => String(item.id) !== String(image.id) && rootFor(item) === rootFor(image));
+        setSelectedId(remaining[0]?.id ?? null);
+        if (!remaining.length) setView("library");
       }
     } catch (cause) {
       if (sessionVersion.current !== session) return;
@@ -394,7 +430,10 @@ function App() {
               <button className="button primary" onClick={() => { setView("create"); setError(""); }}>＋ Tạo hình ảnh mới</button>
             </div>
             <div className="library-toolbar">
-              <div className="library-meta"><span>{images.filter((image) => image.status === "succeeded").length} tác phẩm</span><span className="sort-label">Mới nhất trước</span></div>
+              <div className="library-meta">
+                <span>{groupedImages.length} tác phẩm · {images.length} phiên bản</span>
+                <span className="sort-label">Mới nhất trước</span>
+              </div>
               <p className="library-hint">Chọn một ảnh để xem prompt, chỉnh sửa hoặc tạo biến thể.</p>
             </div>
             <div className="library-filters" role="search" aria-label="Lọc thư viện ảnh">
@@ -405,7 +444,7 @@ function App() {
               <div className="library-error" role="alert"><h2>Chưa tải được thư viện</h2><p>{libraryError}</p><button className="button secondary" onClick={() => void loadImages()}>Thử tải lại</button></div>
             ) : images.length && visibleImages.length ? (
               <div className="image-grid">
-                {visibleImages.map((image, index) => <ImageCard key={image.id} image={image} index={index} onOpen={() => openDetail(image)} onDelete={() => void deleteImage(image)} disabled={working} />)}
+                {visibleImages.map(({ representative, versions }, index) => <ImageCard key={rootFor(representative)} image={representative} versions={versions.length} index={index} onOpen={() => openDetail(representative)} />)}
               </div>
             ) : images.length ? <div className="no-matches" role="status"><h2>Không tìm thấy ảnh phù hợp</h2><p>Thử từ khóa khác hoặc xóa bộ lọc để xem lại thư viện.</p><button className="button secondary" onClick={() => { setLibraryQuery(""); setLibraryFilter("all"); }}>Xóa bộ lọc</button></div> : <EmptyLibrary onCreate={() => setView("create")} />}
             {libraryError && images.length > 0 && <div className="library-retry" role="alert"><span>Chưa cập nhật được thư viện: {libraryError}</span><button className="button secondary" onClick={() => void loadImages()}>Thử lại</button></div>}
@@ -414,7 +453,6 @@ function App() {
 
         {view === "create" && (
           <section className="page-content create-page">
-            <button className="back-link" onClick={() => setView("library")}>← Quay lại thư viện</button>
             <div className="create-layout">
               <div className="create-intro"><p className="eyebrow">BẮT ĐẦU TỪ Ý TƯỞNG</p><h1>Hãy tưởng tượng<br />điều gì đó.</h1><p>Bạn có thể mô tả bằng tiếng Việt. Hệ thống sẽ hiểu ý tưởng và diễn đạt lại thành hướng dẫn cho model tạo ảnh. Càng cụ thể về chủ thể, ánh sáng và cảm xúc, kết quả càng gần với hình dung của bạn.</p><div className="prompt-tip"><span>✳</span><p><strong>Mẹo nhỏ</strong><br />Nêu rõ chủ thể, bối cảnh, phong cách và ánh sáng để có kết quả tốt hơn.</p></div></div>
               <form className="prompt-card" onSubmit={createImage} aria-busy={working}>
@@ -427,8 +465,8 @@ function App() {
                   </select></label>
                   <span className="prompt-save-note">✧ Prompt gốc được lưu cùng ảnh</span>
                 </div>
-                <div className="prompt-card-foot"><span>{working ? `Đang xử lý ${completedCount}/${imageCount} ảnh` : "Sẵn sàng tạo ảnh"}</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
-                {working && <><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={imageCount} aria-valuenow={completedCount}><span style={{ width: `${Math.round((completedCount / imageCount) * 100)}%` }} /></div><div className="progress-note" role="status">Đã xử lý {completedCount}/{imageCount} ảnh. Mỗi ảnh được lưu riêng; có thể mất vài phút.</div></>}
+                <div className="prompt-card-foot"><span>{working ? `Đã xử lý ${completedCount}/${imageCount} lượt · ${successCount} ảnh hoàn tất` : "Sẵn sàng tạo ảnh"}</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
+                {working && <div className="generation-progress" role="status" aria-live="polite"><div className="progress-copy"><strong>{generationPhase === "refreshing" ? "Đang cập nhật thư viện" : `Đã xử lý ${completedCount}/${imageCount} lượt`}</strong><span>{generationPhase === "refreshing" ? "Đang đồng bộ các phiên bản vừa lưu…" : `${Math.max(startedCount - completedCount, 0)} lượt đang chạy · ${successCount} ảnh lưu thành công`}</span></div><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={imageCount} aria-valuenow={completedCount} aria-valuetext={`${completedCount} trên ${imageCount} lượt đã xử lý`}><span style={{ width: `${Math.round((completedCount / imageCount) * 100)}%` }} />{startedCount > completedCount && <i className="progress-active" />}</div><div className="progress-note">{generationPhase === "refreshing" ? "Giữ nguyên màn hình trong khi thư viện cập nhật." : "Mỗi ảnh được lưu riêng. Lượt đang chạy có thể mất vài phút."}</div></div>}
               </form>
             </div>
           </section>
@@ -437,10 +475,18 @@ function App() {
         {view === "detail" && selected && (
           <section className="page-content detail-page">
             <button className="back-link" onClick={() => setView("library")}>← Quay lại thư viện</button>
+            <div className="version-selector" aria-label="Các phiên bản hình ảnh">
+              <div><span className="eyebrow">LỊCH SỬ PHIÊN BẢN</span><p>Chọn phiên bản để xem prompt, tải hoặc tiếp tục chỉnh sửa.</p></div>
+              <div className="version-list" role="group" aria-label="Chọn phiên bản">
+                {selectedVersions.map((image, index) => <button className={`version-item ${String(image.id) === String(selected.id) ? "selected" : ""}`} key={image.id} type="button" aria-pressed={String(image.id) === String(selected.id)} onClick={() => setSelectedId(image.id)}>
+                  <span className="version-number">V{index + 1}</span><span className="version-copy"><strong>{operationLabel(image.operation)}</strong><small>{formatDate(image.created_at)}</small></span><StatusBadge status={image.status} />
+                </button>)}
+              </div>
+            </div>
             <div className="detail-grid">
               <div className="detail-preview">
                 {selected.status === "succeeded" ? <img src={imageFile(selected.id)} alt={selected.prompt} /> : <div className="image-placeholder"><span>{selected.status === "processing" ? "Đang xử lý" : "Tạo ảnh thất bại"}</span></div>}
-                {selected.status === "succeeded" && <a className="download-link" href={imageFile(selected.id)} download>↓ Tải hình ảnh</a>}
+                {selected.status === "succeeded" && <a className="button secondary download-link" href={imageFile(selected.id)} download>↓ Tải hình ảnh · phiên bản này</a>}
               </div>
               <div className="detail-info">
                 <div className="detail-title-row"><div><p className="eyebrow">{operationLabel(selected.operation)}</p><h1>Chi tiết hình ảnh</h1></div><StatusBadge status={selected.status} /></div>
@@ -454,18 +500,17 @@ function App() {
                   <form className="action-form" onSubmit={(event) => void createDerived(event, "edit")}>
                     <label htmlFor="edit-prompt">Chỉnh sửa bằng prompt</label>
                     <textarea id="edit-prompt" maxLength={4000} value={editPrompt} onChange={(event) => setEditPrompt(event.target.value)} placeholder="Ví dụ: Thêm những đám mây hồng ở phía chân trời…" required />
-                    <button className="button secondary" type="submit" disabled={working || !editPrompt.trim()}>{workingAction === "edit" ? "Đang chỉnh sửa…" : "Tạo bản chỉnh sửa"}</button>
+                    <button className="button primary action-submit" type="submit" disabled={working || !editPrompt.trim()}>{workingAction === "edit" ? <><span className="button-loader" /> Đang chỉnh sửa…</> : "Tạo bản chỉnh sửa"}</button>
                   </form>
                   <form className="action-form variation-form" onSubmit={(event) => void createDerived(event, "variations")}>
                     <label htmlFor="variation-prompt">Tạo biến thể <span>Tùy chọn · để trống dùng hướng mặc định</span></label>
                     <textarea id="variation-prompt" maxLength={2000} value={variationPrompt} onChange={(event) => setVariationPrompt(event.target.value)} placeholder="Thêm hướng dẫn cho biến thể bằng tiếng Việt hoặc ngôn ngữ bạn muốn…" />
-                    <button className="button secondary" type="submit" disabled={working}>{workingAction === "variations" ? "Đang tạo biến thể…" : "Tạo biến thể"}</button>
+                    <button className="button secondary action-submit" type="submit" disabled={working}>{workingAction === "variations" ? <><span className="button-loader" /> Đang tạo biến thể…</> : "Tạo biến thể"}</button>
                   </form>
-                  {workingAction && <p className="progress-note" role="status">{workingAction === "edit" ? "Đang tạo bản chỉnh sửa" : "Đang tạo biến thể"}. Có thể mất một chút thời gian.</p>}
+                  {workingAction && <div className="derived-progress" role="status" aria-live="polite"><span className="progress-spinner" aria-hidden="true" /><strong>{workingAction === "edit" ? "Đang tạo bản chỉnh sửa" : "Đang tạo biến thể"}</strong><span>Đang xử lý và lưu phiên bản mới. Có thể mất một chút thời gian.</span></div>}
                 </div>}
               </div>
             </div>
-            {related.length > 0 && <div className="related-section"><h2>Lịch sử hình ảnh</h2><p>Các ảnh liên quan trong thư viện của bạn.</p><div className="related-list">{related.map((image) => <button className="related-item" key={image.id} onClick={() => openDetail(image)}>{image.status === "succeeded" ? <img src={imageFile(image.id)} alt="" /> : <span aria-hidden="true">✳</span>}<span><strong>{operationLabel(image.operation)}</strong><small>{image.prompt}</small></span><span>↗</span></button>)}</div></div>}
           </section>
         )}
         {view === "detail" && !selected && <div className="page-content"><EmptyLibrary onCreate={() => setView("create")} /></div>}
@@ -478,7 +523,7 @@ function Brand() {
   return <div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>atelier<span className="brand-dot">.</span></span></div>;
 }
 
-function ImageCard({ image, index, onOpen, onDelete, disabled }: { image: ImageRecord; index: number; onOpen: () => void; onDelete: () => void; disabled: boolean }) {
+function ImageCard({ image, versions, index, onOpen }: { image: ImageRecord; versions: number; index: number; onOpen: () => void }) {
   return (
     <div className="image-card">
       <button className="image-card-open" onClick={onOpen} aria-label={`Mở hình ảnh: ${image.prompt}`}>
@@ -486,9 +531,8 @@ function ImageCard({ image, index, onOpen, onDelete, disabled }: { image: ImageR
           {image.status === "succeeded" ? <img loading="lazy" src={imageFile(image.id)} alt="" /> : <div className="image-placeholder"><span>{image.status === "processing" ? "Đang xử lý" : "Tạo ảnh thất bại"}</span></div>}
           <span className="card-open" aria-hidden="true">↗</span>
         </div>
-        <div className="image-card-copy"><p>{image.prompt}</p><div><span>{formatDate(image.created_at)}</span><StatusBadge status={image.status} /></div></div>
+        <div className="image-card-copy"><p>{image.prompt}</p><div><span>{formatDate(image.created_at)} · {versions} phiên bản</span><StatusBadge status={image.status} /></div></div>
       </button>
-      <button className="card-delete" type="button" disabled={disabled} onClick={onDelete} aria-label={`Xóa hình ảnh: ${image.prompt}`}>Xóa</button>
     </div>
   );
 }

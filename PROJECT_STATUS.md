@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-26
+Last updated: 2026-11-27
 
 ## Container recovery — 2026-11-26
 
@@ -114,6 +114,19 @@ planner completion counts carry forward.
 | 8. Security audit và vá lỗi | Đã deploy local Compose | 40 tests trên Python 3.11 trước triển khai; dependency audit sạch; Python 3.10 bị từ chối; Docker Scout còn 27 cảnh báo mức trung bình/thấp; local/public health 200 |
 
 ## Now
+
+- UI/UX progress pass (2026-11-27): create runs up to two requests concurrently
+  and shows completed attempts, successful stored-image count, active requests,
+  then a library-refresh phase. Edit/variation show explicit saving status.
+  Primary, secondary, download and destructive actions have clearer labels and
+  visual hierarchy. Browser suite (30 desktop/mobile tests), build, pytest and
+  style checks pass; provider and deployment remain unverified.
+
+- UI/UX version-group correction (2026-11-27): image lineages render as one
+  library item with responsive V1/V2 selector in detail. Search/filter scan all
+  versions, card-level delete is removed, and deleting selected version keeps
+  user in remaining lineage. Offline API, build and Playwright checks pass;
+  live provider and deployment remain unverified.
 
 - UI/UX redesign pass (2026-11-24) updates the existing studio toward a calm
   editorial workspace: stronger image-first library scanning, clearer prompt
