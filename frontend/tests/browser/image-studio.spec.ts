@@ -23,11 +23,12 @@ const image = (id: number, prompt = `Ảnh ${id}`): ImageRecord => ({
   created_at: date,
 });
 
-async function mockApi(page: Page, options: { images?: ImageRecord[]; registration?: boolean } = {}) {
+async function mockApi(page: Page, options: { images?: ImageRecord[]; registration?: boolean; holdGeneration?: boolean } = {}) {
   let loggedIn = false;
   let images = [...(options.images ?? [])];
   let nextId = 20;
   let generateCalls = 0;
+  const heldGeneration: Array<() => void> = [];
   let failNextLibrary = false;
 
   await page.route("**/api/**", async (route) => {
@@ -58,12 +59,19 @@ async function mockApi(page: Page, options: { images?: ImageRecord[]; registrati
       return json(images);
     }
     if (path === "/api/images/generate" && method === "POST") {
-      generateCalls += 1;
-      if (generateCalls === 2 && (await request.postDataJSON()).prompt === "partial") return json({ detail: "provider unavailable" }, 503);
+      const callNumber = ++generateCalls;
       const body = await request.postDataJSON();
-      const created = image(nextId++, body.prompt);
-      images = [created, ...images];
-      return json(created);
+      const respond = () => {
+        if (callNumber === 2 && body.prompt === "partial") return json({ detail: "provider unavailable" }, 503);
+        const created = image(nextId++, body.prompt);
+        images = [created, ...images];
+        return json(created);
+      };
+      if (options.holdGeneration) {
+        heldGeneration.push(() => { void respond(); });
+        return;
+      }
+      return respond();
     }
     const fileMatch = path.match(/^\/api\/images\/(\d+)\/file$/);
     if (fileMatch && method === "GET") return route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("fake-png") });
@@ -83,6 +91,8 @@ async function mockApi(page: Page, options: { images?: ImageRecord[]; registrati
       await expect(page.getByRole("heading", { name: "Thư viện hình ảnh" })).toBeVisible();
     },
     failLibrary: () => { failNextLibrary = true; },
+    generateCallCount: () => generateCalls,
+    releaseGeneration: () => heldGeneration.shift()?.(),
   };
 }
 
@@ -108,6 +118,37 @@ test("partial six-image creation keeps successful results and reports failure", 
   await page.locator('button[type="submit"]').click();
   await expect(page.getByRole("alert")).toContainText("5/6 ảnh đã tạo");
   await expect(page.getByText("partial").first()).toBeVisible();
+});
+
+test("batch generation keeps at most two requests in flight", async ({ page }) => {
+  const api = await mockApi(page, { holdGeneration: true });
+  await page.goto("/");
+  await api.login();
+  await page.getByRole("button", { name: /Tạo hình ảnh mới/ }).click();
+  await page.getByLabel("Mô tả hình ảnh").fill("held");
+  await page.getByLabel("Số ảnh cần tạo").selectOption("3");
+  await page.locator('button[type="submit"]').click();
+  await expect.poll(api.generateCallCount).toBe(2);
+  api.releaseGeneration();
+  await expect.poll(api.generateCallCount).toBe(3);
+  api.releaseGeneration();
+  api.releaseGeneration();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("held").first()).toBeVisible();
+});
+
+test("generation response after logout does not enter new session", async ({ page }) => {
+  const api = await mockApi(page, { holdGeneration: true });
+  await page.goto("/");
+  await api.login();
+  await page.getByRole("button", { name: /Tạo hình ảnh mới/ }).click();
+  await page.getByLabel("Mô tả hình ảnh").fill("stale generation");
+  await page.locator('button[type="submit"]').click();
+  await expect.poll(api.generateCallCount).toBe(1);
+  await page.getByRole("button", { name: "Đăng xuất" }).click();
+  api.releaseGeneration();
+  await expect(page.getByRole("button", { name: "Đăng nhập" })).toBeVisible();
+  await expect(page.getByText("stale generation")).toHaveCount(0);
 });
 
 test("detail shows prompt and download link", async ({ page }) => {

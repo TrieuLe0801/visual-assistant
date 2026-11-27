@@ -209,23 +209,32 @@ function App() {
     setWorking(true);
     const session = sessionVersion.current;
     try {
+      const total = imageCount;
       const created: ImageRecord[] = [];
       let firstError = "";
-      for (let index = 0; index < imageCount; index += 1) {
-        try {
-          const image = await request<ImageRecord>("/api/images/generate", {
-            method: "POST",
-            body: JSON.stringify({ prompt: value }),
-          });
-          if (sessionVersion.current !== session) return;
-          created.push(image);
-          setImages((current) => [image, ...current.filter((item) => String(item.id) !== String(image.id))]);
-        } catch (cause) {
-          if (sessionVersion.current !== session) return;
-          if (!firstError) firstError = cause instanceof Error ? cause.message : "Tạo ảnh thất bại.";
+      let nextIndex = 0;
+      const generateOne = async () => {
+        while (true) {
+          const index = nextIndex;
+          nextIndex += 1;
+          if (index >= total) return;
+          try {
+            const image = await request<ImageRecord>("/api/images/generate", {
+              method: "POST",
+              body: JSON.stringify({ prompt: value }),
+            });
+            if (sessionVersion.current !== session) return;
+            created.push(image);
+            setImages((current) => [image, ...current.filter((item) => String(item.id) !== String(image.id))]);
+          } catch (cause) {
+            if (sessionVersion.current !== session) return;
+            if (!firstError) firstError = cause instanceof Error ? cause.message : "Tạo ảnh thất bại.";
+          } finally {
+            if (sessionVersion.current === session) setCompletedCount((current) => current + 1);
+          }
         }
-        setCompletedCount(index + 1);
-      }
+      };
+      await Promise.all(Array.from({ length: Math.min(2, total) }, () => generateOne()));
       await loadImages();
       if (sessionVersion.current !== session) return;
       if (created.length > 0) {
