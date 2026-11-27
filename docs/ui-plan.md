@@ -1,6 +1,6 @@
 # UI Plan — Studio ảnh AI
 
-Last updated: 2026-11-24
+Last updated: 2026-11-27
 Status: Studio redesign implemented in frontend
 
 ## Navigation and screens
@@ -94,3 +94,23 @@ completed, processing and failed records. Filtering happens on loaded records,
 so retry/loading behavior and owner-scoped API calls remain unchanged. A
 distinct no-match state avoids confusing an empty account with a filtered
 result. Controls retain accessible labels and stack at 320px.
+
+## Version groups — 2026-11-27
+
+- Library presents one card per image lineage. Card shows newest version and
+  version count; prompt search and status filtering inspect every version.
+- Detail includes keyboard-friendly chronological V1/V2 selector with current
+  selection, status and timestamp. Each version keeps prompt, download,
+  edit/variation source and delete action.
+- Deleting selected version moves selection to another version in same lineage;
+  deleting final version returns to library. Storage remains one file per result.
+
+## Progress and action clarity — 2026-11-27
+
+- Create 1–6 now reports completed attempts, successful stored images and the
+  currently active request. The active request uses an indeterminate sweep;
+  the UI does not invent provider phases or percentage progress.
+- Edit and variation show an explicit saving state, lock duplicate submits and
+  keep the selected version as source. Create/edit/variation/download controls
+  use stronger visual hierarchy and task-specific labels; delete remains a
+  separate destructive action.

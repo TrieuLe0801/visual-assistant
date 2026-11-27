@@ -135,18 +135,36 @@ class Database:
     def list_images(self, owner_id: str) -> list[ImageRecord]:
         with self.connections.connect() as connection:
             rows = connection.execute(
-                """SELECT * FROM images WHERE owner_id = ? AND deleted_at IS NULL
-                   ORDER BY created_at DESC, id DESC""",
-                (owner_id,),
+                """WITH RECURSIVE lineage(id, root_id) AS (
+                       SELECT id, id FROM images WHERE owner_id = ? AND parent_id IS NULL
+                       UNION ALL
+                       SELECT child.id, lineage.root_id
+                       FROM images child JOIN lineage ON child.parent_id = lineage.id
+                       WHERE child.owner_id = ?
+                   )
+                   SELECT images.*, lineage.root_id FROM images
+                   LEFT JOIN lineage ON lineage.id = images.id
+                   WHERE images.owner_id = ? AND images.deleted_at IS NULL
+                   ORDER BY images.created_at DESC, images.id DESC""",
+                (owner_id, owner_id, owner_id),
             ).fetchall()
         return [_image_from_row(row) for row in rows]
 
     def get_image(self, owner_id: str, image_id: str) -> ImageRecord | None:
         with self.connections.connect() as connection:
             row = connection.execute(
-                "SELECT * FROM images WHERE owner_id = ? AND id = ? "
-                "AND deleted_at IS NULL",
-                (owner_id, image_id),
+                """WITH RECURSIVE lineage(id, root_id) AS (
+                       SELECT id, id FROM images WHERE owner_id = ? AND parent_id IS NULL
+                       UNION ALL
+                       SELECT child.id, lineage.root_id FROM images child
+                       JOIN lineage ON child.parent_id = lineage.id
+                       WHERE child.owner_id = ?
+                   )
+                   SELECT images.*, lineage.root_id FROM images
+                   LEFT JOIN lineage ON lineage.id = images.id
+                   WHERE images.owner_id = ? AND images.id = ?
+                   AND images.deleted_at IS NULL""",
+                (owner_id, owner_id, owner_id, image_id),
             ).fetchone()
         return _image_from_row(row)
 
@@ -241,4 +259,5 @@ def _image_from_row(row: sqlite3.Row | None) -> ImageRecord | None:
         mime_type=row["mime_type"],
         size_bytes=row["size_bytes"],
         error=row["error"],
+        root_id=dict(row).get("root_id"),
     )

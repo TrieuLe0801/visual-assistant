@@ -1,5 +1,33 @@
 # Learning Log — AI image studio MVP
 
+## Progress and action clarity — 2026-11-27
+
+- Added truthful progress feedback for sequential image creation: completed
+  attempts, successful stored-image count and an indeterminate active request.
+  Edit and variation now show explicit saving status and stronger action
+  hierarchy, including a labeled download control.
+- Browser coverage adds held-request checks for create, edit and variation
+  active progress semantics, duplicate-submit locking and status cleanup.
+  Focused desktop/mobile checks passed (6 tests). Provider phases, live
+  generation and deployment remain unverified.
+
+Verification: frontend build passed; full browser suite passed with 24
+desktop/mobile tests. `uv run pytest -q` passed with 57 tests. isort, Black,
+flake8, Ruff and `git diff --check` passed. These are offline checks; live
+provider and deployed behavior were not tested.
+
+## Version-group UI correction — 2026-11-27
+
+- Grouped image records by stable root lineage in library while retaining
+  separate files and metadata. Detail exposes chronological version cards,
+  selected state, status and per-version actions. Removed redundant card delete.
+- Added responsive version selector styling and deterministic browser coverage
+  for grouping, selection and deleting selected version.
+
+Verification: `uv run pytest -q` passed (57 tests); frontend build and browser
+suite passed after dependency install (24 desktop/mobile tests). Full style checks and `git diff --check`
+passed. Live provider, deployed health and production browser remain unverified.
+
 ## Container startup recovery — 2026-11-26
 
 The live Compose `app` restarted repeatedly with

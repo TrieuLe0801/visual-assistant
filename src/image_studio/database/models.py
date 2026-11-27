@@ -26,3 +26,4 @@ class ImageRecord:
     mime_type: str | None
     size_bytes: int | None
     error: str | None
+    root_id: str | None = None
