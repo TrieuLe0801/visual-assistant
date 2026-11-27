@@ -107,10 +107,13 @@ result. Controls retain accessible labels and stack at 320px.
 
 ## Progress and action clarity — 2026-11-27
 
-- Create 1–6 now reports completed attempts, successful stored images and the
-  currently active request. The active request uses an indeterminate sweep;
+- Create 1–6 now runs up to two requests concurrently and reports completed
+  attempts, successful stored images and active requests. Active requests use
+  an indeterminate sweep;
   the UI does not invent provider phases or percentage progress.
 - Edit and variation show an explicit saving state, lock duplicate submits and
   keep the selected version as source. Create/edit/variation/download controls
   use stronger visual hierarchy and task-specific labels; delete remains a
   separate destructive action.
+- After generation requests settle, the UI labels the library refresh phase
+  while it reloads stored results.

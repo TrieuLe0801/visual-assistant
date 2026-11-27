@@ -14,9 +14,9 @@ deleting a source must not break saved descendants.
 ## Decision
 
 - Expose only generation count, from 1 to 6, in the UI. The UI sends one
-  `/api/images/generate` request per image, in sequence. Each request creates
-  one image. Keep provider, model, size, aspect ratio and all other image
-  settings on the server.
+  `/api/images/generate` request per image, with at most two requests in flight.
+  Each request creates one image. Keep provider, model, size, aspect ratio and
+  all other image settings on the server.
 - Persist a separate operation and result for every attempt. The UI reloads
   the library after all attempts and reports partial success, so successful
   images remain available after another attempt fails.
@@ -37,9 +37,10 @@ deleting a source must not break saved descendants.
 
 ## Consequences
 
-- Generating six images makes six sequential image-provider calls. It can take
-  several minutes and incur six image charges. Separate HTTP requests avoid
-  holding the Nginx proxy connection open for the whole set.
+- Generating six images makes six image-provider calls, with two calls able to
+  overlap. It can still take several minutes and incur six image charges.
+  Separate HTTP requests avoid holding the Nginx proxy connection open for the
+  whole set. The concurrency limit reduces burst load and rate-limit risk.
 - Image file deletion cannot share an atomic transaction with SQLite. The API
   deletes the file before marking the record deleted, so a crash between those
   steps may leave a visible record with a missing file. A failed file deletion

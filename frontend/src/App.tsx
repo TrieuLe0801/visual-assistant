@@ -94,6 +94,8 @@ function App() {
   const [imageCount, setImageCount] = useState(1);
   const [completedCount, setCompletedCount] = useState(0);
   const [successCount, setSuccessCount] = useState(0);
+  const [startedCount, setStartedCount] = useState(0);
+  const [generationPhase, setGenerationPhase] = useState<"generating" | "refreshing" | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [variationPrompt, setVariationPrompt] = useState("");
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -214,6 +216,8 @@ function App() {
     setLoadingImages(false);
     setWorking(false);
     setWorkingAction(null);
+    setStartedCount(0);
+    setGenerationPhase(null);
     setSelectedId(null);
     setLibraryQuery("");
     setLibraryFilter("all");
@@ -227,27 +231,41 @@ function App() {
     setError("");
     setCompletedCount(0);
     setSuccessCount(0);
+    setStartedCount(0);
+    setGenerationPhase("generating");
     setWorking(true);
     const session = sessionVersion.current;
     try {
+      const total = imageCount;
       const created: ImageRecord[] = [];
       let firstError = "";
-      for (let index = 0; index < imageCount; index += 1) {
-        try {
-          const image = await request<ImageRecord>("/api/images/generate", {
-            method: "POST",
-            body: JSON.stringify({ prompt: value }),
-          });
-          if (sessionVersion.current !== session) return;
-          created.push(image);
-          setSuccessCount((count) => count + 1);
-          setImages((current) => [image, ...current.filter((item) => String(item.id) !== String(image.id))]);
-        } catch (cause) {
-          if (sessionVersion.current !== session) return;
-          if (!firstError) firstError = cause instanceof Error ? cause.message : "Tạo ảnh thất bại.";
+      let nextIndex = 0;
+      const generateOne = async () => {
+        while (true) {
+          const index = nextIndex;
+          nextIndex += 1;
+          if (index >= total || sessionVersion.current !== session) return;
+          setStartedCount((count) => count + 1);
+          try {
+            const image = await request<ImageRecord>("/api/images/generate", {
+              method: "POST",
+              body: JSON.stringify({ prompt: value }),
+            });
+            if (sessionVersion.current !== session) return;
+            created.push(image);
+            setSuccessCount((count) => count + 1);
+            setImages((current) => [image, ...current.filter((item) => String(item.id) !== String(image.id))]);
+          } catch (cause) {
+            if (sessionVersion.current !== session) return;
+            if (!firstError) firstError = cause instanceof Error ? cause.message : "Tạo ảnh thất bại.";
+          } finally {
+            if (sessionVersion.current === session) setCompletedCount((current) => current + 1);
+          }
         }
-        setCompletedCount(index + 1);
-      }
+      };
+      await Promise.all(Array.from({ length: Math.min(2, total) }, () => generateOne()));
+      if (sessionVersion.current !== session) return;
+      setGenerationPhase("refreshing");
       await loadImages();
       if (sessionVersion.current !== session) return;
       if (created.length > 0) {
@@ -261,11 +279,15 @@ function App() {
       }
     } catch (cause) {
       if (sessionVersion.current !== session) return;
+      setGenerationPhase("refreshing");
       await loadImages();
       if (sessionVersion.current !== session) return;
       setError(cause instanceof Error ? cause.message : "Tạo ảnh thất bại.");
     } finally {
-      if (sessionVersion.current === session) setWorking(false);
+      if (sessionVersion.current === session) {
+        setWorking(false);
+        setGenerationPhase(null);
+      }
     }
   }
 
@@ -444,7 +466,7 @@ function App() {
                   <span className="prompt-save-note">✧ Prompt gốc được lưu cùng ảnh</span>
                 </div>
                 <div className="prompt-card-foot"><span>{working ? `Đã xử lý ${completedCount}/${imageCount} lượt · ${successCount} ảnh hoàn tất` : "Sẵn sàng tạo ảnh"}</span><button className="button primary" type="submit" disabled={working || !prompt.trim()}>{working ? <><span className="button-loader" /> Đang tạo ảnh…</> : <>Tạo hình ảnh <span aria-hidden="true">↗</span></>}</button></div>
-                {working && <div className="generation-progress" role="status" aria-live="polite"><div className="progress-copy"><strong>Đang tạo ảnh {Math.min(completedCount + 1, imageCount)} / {imageCount}</strong><span>{completedCount} lượt đã xử lý · {successCount} ảnh lưu thành công</span></div><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={imageCount} aria-valuenow={completedCount} aria-valuetext={`${completedCount} trên ${imageCount} lượt đã xử lý`}><span style={{ width: `${Math.round((completedCount / imageCount) * 100)}%` }} /><i className="progress-active" /></div><div className="progress-note">Mỗi ảnh được lưu riêng. Lượt hiện tại có thể mất vài phút.</div></div>}
+                {working && <div className="generation-progress" role="status" aria-live="polite"><div className="progress-copy"><strong>{generationPhase === "refreshing" ? "Đang cập nhật thư viện" : `Đã xử lý ${completedCount}/${imageCount} lượt`}</strong><span>{generationPhase === "refreshing" ? "Đang đồng bộ các phiên bản vừa lưu…" : `${Math.max(startedCount - completedCount, 0)} lượt đang chạy · ${successCount} ảnh lưu thành công`}</span></div><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={imageCount} aria-valuenow={completedCount} aria-valuetext={`${completedCount} trên ${imageCount} lượt đã xử lý`}><span style={{ width: `${Math.round((completedCount / imageCount) * 100)}%` }} />{startedCount > completedCount && <i className="progress-active" />}</div><div className="progress-note">{generationPhase === "refreshing" ? "Giữ nguyên màn hình trong khi thư viện cập nhật." : "Mỗi ảnh được lưu riêng. Lượt đang chạy có thể mất vài phút."}</div></div>}
               </form>
             </div>
           </section>

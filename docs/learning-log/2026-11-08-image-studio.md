@@ -2,8 +2,8 @@
 
 ## Progress and action clarity — 2026-11-27
 
-- Added truthful progress feedback for sequential image creation: completed
-  attempts, successful stored-image count and an indeterminate active request.
+- Added truthful progress feedback for image creation with up to two requests in
+  flight: completed attempts, successful stored-image count and active requests.
   Edit and variation now show explicit saving status and stronger action
   hierarchy, including a labeled download control.
 - Browser coverage adds held-request checks for create, edit and variation
@@ -11,7 +11,7 @@
   Focused desktop/mobile checks passed (6 tests). Provider phases, live
   generation and deployment remain unverified.
 
-Verification: frontend build passed; full browser suite passed with 24
+Verification: frontend build passed; full browser suite passed with 30
 desktop/mobile tests. `uv run pytest -q` passed with 57 tests. isort, Black,
 flake8, Ruff and `git diff --check` passed. These are offline checks; live
 provider and deployed behavior were not tested.
@@ -25,8 +25,34 @@ provider and deployed behavior were not tested.
   for grouping, selection and deleting selected version.
 
 Verification: `uv run pytest -q` passed (57 tests); frontend build and browser
-suite passed after dependency install (24 desktop/mobile tests). Full style checks and `git diff --check`
+suite passed after dependency install (30 desktop/mobile tests). Full style checks and `git diff --check`
 passed. Live provider, deployed health and production browser remain unverified.
+
+## Bounded batch generation concurrency — 2026-11-27
+
+Coding goal: reduce wall-clock latency for 1–6 image creation batches while
+preserving one request and one stored result per image. `App.tsx` now runs up to
+two generation requests at once, starts the next request as each finishes, and
+increments progress for both success and failure. Session-version checks still
+discard stale responses after logout or account changes. ADR 0009 records the
+limit and provider rate-limit tradeoff.
+
+Verification:
+
+- `npm ci` in `frontend/`: passed. Existing npm audit reports 2 high
+  advisories; dependency tree was not changed.
+- `npm run build` in `frontend/`: passed.
+- `npm run test:browser -- --workers=1` in `frontend/`: passed, 30 desktop and
+  mobile tests, including bounded concurrency, refresh-phase and stale-response coverage.
+  One earlier retest failed the concurrency assertion and then lost its Vite
+  connection. A focused rerun passed 2/2 tests; two subsequent full reruns
+  passed 18/18. The intermittent failure has not been reproduced or explained.
+- `git diff --check`: passed.
+- Python `uv run pytest -q` (57 passed), isort, Black, flake8 and Ruff: passed
+  in the current project baseline; no Python files changed for this work.
+- Live provider latency and deployed behavior: not run. Mocked browser evidence
+  proves request concurrency, partial-result handling and stale-session
+  isolation, not provider speed or production rate limits.
 
 ## Container startup recovery — 2026-11-26
 

@@ -115,12 +115,12 @@ planner completion counts carry forward.
 
 ## Now
 
-- UI/UX progress pass (2026-11-27): create now shows completed attempts,
-  successful stored-image count and an indeterminate active-request indicator;
-  edit/variation show explicit saving status. Primary, secondary, download and
-  destructive actions have clearer labels and visual hierarchy. Browser/build
-  verification is pending for this worktree change; provider and deployment
-  remain unverified.
+- UI/UX progress pass (2026-11-27): create runs up to two requests concurrently
+  and shows completed attempts, successful stored-image count, active requests,
+  then a library-refresh phase. Edit/variation show explicit saving status.
+  Primary, secondary, download and destructive actions have clearer labels and
+  visual hierarchy. Browser suite (30 desktop/mobile tests), build, pytest and
+  style checks pass; provider and deployment remain unverified.
 
 - UI/UX version-group correction (2026-11-27): image lineages render as one
   library item with responsive V1/V2 selector in detail. Search/filter scan all
